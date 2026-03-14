@@ -19,6 +19,7 @@ type Me = {
 };
 const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
   selectedChat,
+  me,
 }) => {
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
@@ -60,7 +61,7 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
             </div>
           </div>
           <div className="h-full flex flex-col justify-start  p-2 w-full">
-            <ChatCard />
+            <ChatCard me={me} />
           </div>
           <div className="max-w-[90%] w-full rounded-full  flex justify-center items-center p-3 border  border-slate-200 mt-auto">
             <input

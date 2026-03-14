@@ -8,7 +8,6 @@ const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = React.useState<string>("sda");
   const authContext = useAuth();
   const { loading, me, error } = authContext;
-  console.log("err", error);
 
   if (loading) return <div>loading</div>;
   if (error.err) return <div>{error.message}</div>;
