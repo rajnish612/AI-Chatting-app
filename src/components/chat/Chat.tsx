@@ -5,7 +5,7 @@ import ChatDetails from "./ChatDetails";
 import { useAuth } from "../../hooks/useAuth";
 
 const Chat: React.FC = () => {
-  const [selectedChat, setSelectedChat] = React.useState<string>("sda");
+  const [selectedChat, setSelectedChat] = React.useState<string>("");
   const authContext = useAuth();
   const { loading, me, error } = authContext;
 

@@ -5,12 +5,12 @@ import ChatCard from "./ChatCard";
 interface Message {
   _id: string;
   senderId: string;
-  receiver: string;
   text: string;
   image: string;
   createdAt: Date;
   updatedAt: Date;
   chatId: string;
+  seenBy: string[];
 }
 type Me = {
   fullName?: string;
@@ -30,6 +30,7 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
         const res = await axiosInstance.get<ApiResponse<Message[]>>(
           `/message/get-messages?chatId=${selectedChat}`,
         );
+
         if (res.data.success) {
           setMessages(res.data.data);
         }
@@ -45,6 +46,7 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
     };
     fetchedMessages();
   }, [selectedChat]);
+
   return (
     <div className="min-h-screen flex pb-5  justify-start flex-col items-center min-w-sm bg-white w-full">
       {!selectedChat ? (
@@ -60,8 +62,10 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
               <span>online</span>
             </div>
           </div>
-          <div className="h-full flex flex-col justify-start  p-2 w-full">
-            <ChatCard me={me} />
+          <div className="h-full overflow-y-scroll flex flex-col justify-start  p-2 w-full">
+            {messages.map((message, idx) => (
+              <ChatCard key={idx} message={message} me={me} />
+            ))}
           </div>
           <div className="max-w-[90%] w-full rounded-full  flex justify-center items-center p-3 border  border-slate-200 mt-auto">
             <input

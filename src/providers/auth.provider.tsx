@@ -2,6 +2,7 @@ import React from "react";
 import axiosInstance from "../lib/axios";
 import { AuthContext } from "../context/AuthContext";
 type Me = {
+  _id: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
@@ -12,7 +13,6 @@ type ResponseError = {
   message: string;
   status?: number;
 };
-
 
 export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

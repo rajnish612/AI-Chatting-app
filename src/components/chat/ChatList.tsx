@@ -2,6 +2,7 @@ import React from "react";
 
 import axios from "axios";
 import type { ApiResponse } from "../../lib/apiResponse";
+import axiosInstance from "../../lib/axios";
 type Me = {
   fullName?: string;
   email?: string;
@@ -9,18 +10,33 @@ type Me = {
 };
 type ChatType = "private" | "group";
 type LastMessageType = "audio" | "image" | "video" | "text";
-type participants = {
-  name: string;
-  profilePic?: string;
-};
+
 interface Chats {
-  participants: Array<participants>;
+  _id: string;
+  participants: string[];
   lastMessage: string;
   lastMessageType: LastMessageType;
   type: ChatType;
   createdAt: Date;
   updatedAt: Date;
 }
+const ChatListChatBox: React.FC<{
+  chat: Chats;
+  setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
+}> = React.memo(({ chat, setSelectedChat }) => {
+  return (
+    <div
+      onClick={() => setSelectedChat(chat._id)}
+      className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
+    >
+      <div className="w-10 h-10 rounded-full bg-red-400"></div>
+      <div className="flex flex-col">
+        <span className="font-bold">{chat?.participants[0] || "loading"} </span>
+        <span>online</span>
+      </div>
+    </div>
+  );
+});
 const ChatList: React.FC<{
   me: Me;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
@@ -30,9 +46,12 @@ const ChatList: React.FC<{
   const getChats = async () => {
     setChatsLoading(true);
     try {
-      const res = await axios.get<ApiResponse<Chats[]>>("/chats/get-chats", {
-        timeout: 3000,
-      });
+      const res = await axiosInstance.get<ApiResponse<Chats[]>>(
+        "/chats/get-chats",
+        {
+          timeout: 3000,
+        },
+      );
 
       if (res.data.success) {
         setChats(res.data.data);
@@ -90,17 +109,7 @@ const ChatList: React.FC<{
       </div>
       {chats.map((chat, idx) => {
         return (
-          <div
-            onClick={() => setSelectedChat("wds")}
-            key={idx}
-            className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
-          >
-            <div className="w-10 h-10 rounded-full bg-red-400"></div>
-            <div className="flex flex-col">
-              <span className="font-bold">{me?.fullName || "loading"} </span>
-              <span>online</span>
-            </div>
-          </div>
+          <ChatListChatBox setSelectedChat={setSelectedChat} chat={chat} />
         );
       })}
     </div>
