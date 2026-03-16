@@ -4,6 +4,7 @@ import axios from "axios";
 import type { ApiResponse } from "../../lib/apiResponse";
 import axiosInstance from "../../lib/axios";
 type Me = {
+  _id: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
@@ -24,14 +25,37 @@ const ChatListChatBox: React.FC<{
   chat: Chats;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
 }> = React.memo(({ chat, setSelectedChat }) => {
+  const [unseenCount, setUnseenCount] = React.useState<number>(0);
+  React.useEffect(() => {
+    const getNumberOfUnseenMessages = async () => {
+      if (!chat._id) return;
+      try {
+        const res = await axiosInstance.get<ApiResponse<number>>(
+          `/chats/unseen-count?chatId=${chat._id}`,
+        );
+        if (res.data.success) {
+          setUnseenCount(res.data.data);
+        }
+      } catch (err) {
+        console.log("err in chatListBox", err.response);
+      }
+    };
+    getNumberOfUnseenMessages();
+  }, [chat._id]);
+  console.log("unseenCount", unseenCount);
+
   return (
     <div
       onClick={() => setSelectedChat(chat._id)}
       className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
     >
-      <div className="w-10 h-10 rounded-full bg-red-400"></div>
+      <div className="min-w-10 relative h-10 rounded-full bg-red-400">
+        {unseenCount && <div className="absolute -top-2 -left-2  rounded-full bg-yellow-200 flex justify-center items-center w-6 text-center h-6 text-white">{unseenCount}</div>}
+      </div>
       <div className="flex flex-col">
-        <span className="font-bold">{chat?.participants[0] || "loading"} </span>
+        <span className="font-bold break-all ">
+          {chat?.participants[0] + "sadsadaasda" || "loading"}{" "}
+        </span>
         <span>online</span>
       </div>
     </div>

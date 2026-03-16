@@ -13,6 +13,7 @@ interface Message {
   seenBy: string[];
 }
 type Me = {
+  _id: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
@@ -23,9 +24,11 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
 }) => {
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
-
+  const [textMessage, setTextMessage] = React.useState<string>("");
+  const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
   React.useEffect(() => {
     const fetchedMessages = async () => {
+      if (!selectedChat) return;
       try {
         const res = await axiosInstance.get<ApiResponse<Message[]>>(
           `/message/get-messages?chatId=${selectedChat}`,
@@ -46,6 +49,24 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
     };
     fetchedMessages();
   }, [selectedChat]);
+  const sendTextMessage = async () => {
+    if (!textMessage || sendingMessage) return;
+    setSendingMessage(true);
+    try {
+      const res = await axiosInstance.post("/message/send/text-message", {
+        chatId: selectedChat,
+        message: textMessage,
+      });
+      if (res.data.success) {
+        setMessages([...messages, res.data.data]);
+      }
+    } catch (err) {
+      console.log("err", err);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+  console.log("messages", messages);
 
   return (
     <div className="min-h-screen flex pb-5  justify-start flex-col items-center min-w-sm bg-white w-full">
@@ -62,23 +83,29 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
               <span>online</span>
             </div>
           </div>
-          <div className="h-full overflow-y-scroll flex flex-col justify-start  p-2 w-full">
+          <div className="h-full gap-y-2 overflow-y-scroll flex flex-col justify-start  p-2 w-full">
             {messages.map((message, idx) => (
               <ChatCard key={idx} message={message} me={me} />
             ))}
           </div>
           <div className="max-w-[90%] w-full rounded-full  flex justify-center items-center p-3 border  border-slate-200 mt-auto">
             <input
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const { value } = e.target;
+                setTextMessage(value);
+              }}
               type="text"
               className="w-full outline-0  bg-white"
               placeholder="enter text"
               name="message"
             />
             <button
+              disabled={sendingMessage}
+              onClick={() => sendTextMessage()}
               className=" bg-blue-300 p-2 rounded-full text-white"
               type="submit"
             >
-              Send
+              {sendingMessage ? "sending" : "send"}
             </button>
           </div>
         </>
