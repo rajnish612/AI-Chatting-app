@@ -17,9 +17,17 @@ type User = {
   email?: string;
   profilePic?: string;
 };
+type Participant = {
+  userId: {
+    _id: string;
+    fullName: string;
+    profilePic: string;
+  };
+  lastSeen: Date;
+};
 interface Chats {
   _id: string;
-  participants: string[];
+  participants: Participant[];
   lastMessage: string;
   lastMessageType: LastMessageType;
   type: ChatType;
@@ -56,11 +64,7 @@ const ChatListChatBox: React.FC<{
     }
   }, [chat._id, selectedChat]);
   React.useEffect(() => {
-    if (
-      chat.name &&
-      chat.type === "private" &&
-      chat.participants.length === 1
-    ) {
+    if (chat.name && chat.type === "group") {
       setChatName(chat.name);
     }
   }, [chat.name, chat.type, chat.participants.length]);
@@ -70,24 +74,8 @@ const ChatListChatBox: React.FC<{
       chat.type === "private" &&
       chat.participants.length === 1
     ) {
-      const fetchUser = async () => {
-        try {
-          const res = await axiosInstance.get<ApiResponse<User>>(
-            `/user/${chat.participants[0]}`,
-          );
-          if (res.data.success && res.data.data.fullName) {
-            setChatName(res.data.data.fullName);
-            if (res.data.data.profilePic) {
-              setChatPic(res.data.data.profilePic);
-            } else {
-              setChatPic("");
-            }
-          }
-        } catch (err) {
-          console.log(err.response.data.message);
-        }
-      };
-      fetchUser();
+      setChatName(chat.participants[0].userId.fullName);
+      setChatPic(chat.participants[0].userId.profilePic);
     }
   }, [chat.name, chat.type, chat.participants]);
 
@@ -128,6 +116,7 @@ const ChatList: React.FC<{
           timeout: 3000,
         },
       );
+      console.log("chats", res.data);
 
       if (res.data.success) {
         setChats(res.data.data);

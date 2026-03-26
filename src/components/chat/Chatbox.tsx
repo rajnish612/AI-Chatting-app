@@ -19,13 +19,21 @@ type Me = {
   email?: string;
   profilePic?: string;
 };
+type Participant = {
+  userId: {
+    _id: string;
+    fullName: string;
+    profilePic: string;
+  };
+  lastSeen: Date;
+};
 const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;
 }> = ({ selectedChat, me }) => {
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const [participants, setParticipants] = React.useState<string[]>([]);
+  const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
   React.useEffect(() => {
@@ -132,7 +140,7 @@ const Chatbox: React.FC<{
     const getParticipants = async () => {
       if (!selectedChat) return;
       try {
-        const res = await axiosInstance.get<ApiResponse<string[]>>(
+        const res = await axiosInstance.get<ApiResponse<Participant[]>>(
           `/chats/get-participants?chatId=${selectedChat}`,
         );
         if (res.data.success) {

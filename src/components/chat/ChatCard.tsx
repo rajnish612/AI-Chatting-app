@@ -6,6 +6,14 @@ type Me = {
   email?: string;
   profilePic?: string;
 };
+type Participant = {
+  userId: {
+    _id: string;
+    fullName: string;
+    profilePic: string;
+  };
+  lastSeen: Date;
+};
 interface Message {
   _id: string;
   senderId: string;
@@ -17,14 +25,14 @@ interface Message {
   seenBy: string[];
 }
 const ChatCard: React.FC<{
-  participants: string[];
+  participants: Participant[];
   me: Me;
   message: Message;
 }> = ({ me, message, participants }) => {
   const filteredParticipants = participants.filter(
-    (participant) => participant != me._id,
+    (participant) => participant.userId._id != me._id,
   );
-  const isSeen = filteredParticipants.some((id) => message.seenBy.includes(id));
+  const isSeen = filteredParticipants.some((participant) => message.seenBy.includes(participant.userId._id));
   return (
     <div
       className={`max-w-[50%] w-fit  bg-slate-100 border ${me._id == message.senderId && "ml-auto"} rounded-lg gap-x-2 border-slate-500 flex justify-start items-center p-2`}
