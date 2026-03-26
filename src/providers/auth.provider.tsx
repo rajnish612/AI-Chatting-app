@@ -1,8 +1,9 @@
 import React from "react";
 import axiosInstance from "../lib/axios";
 import { AuthContext } from "../context/AuthContext";
+import socket from "../lib/socket";
 type Me = {
-  _id: string;
+  _id?: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
@@ -18,6 +19,9 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [loading, setLoading] = React.useState<boolean>(true);
+  const [socketConnected, setIsSocketConnected] = React.useState(
+    socket.connected,
+  );
   const [me, setMe] = React.useState<Me>({});
   const [error, setError] = React.useState<ResponseError>({
     errorType: "none",
@@ -65,6 +69,28 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   React.useEffect(() => {
     checkAuth();
   }, []);
+
+  React.useEffect(() => {
+    function onConnect() {
+      setIsSocketConnected(true);
+    }
+    function onDisconnect() {
+      setIsSocketConnected(false);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+    };
+  }, []);
+  React.useEffect(() => {
+    if (me._id && socketConnected) {
+      socket.emit("join", { _id: me._id });
+    }
+  }, [me._id, socketConnected]);
   return (
     <AuthContext.Provider value={{ loading: loading, me: me, error: error }}>
       {children}

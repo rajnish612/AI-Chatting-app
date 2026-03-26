@@ -4,14 +4,19 @@ import axios from "axios";
 import type { ApiResponse } from "../../lib/apiResponse";
 import axiosInstance from "../../lib/axios";
 type Me = {
-  _id: string;
+  _id?: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
 };
 type ChatType = "private" | "group";
 type LastMessageType = "audio" | "image" | "video" | "text";
-
+type User = {
+  _id?: string;
+  fullName?: string;
+  email?: string;
+  profilePic?: string;
+};
 interface Chats {
   _id: string;
   participants: string[];
@@ -20,12 +25,17 @@ interface Chats {
   type: ChatType;
   createdAt: Date;
   updatedAt: Date;
+  name?: string;
 }
 const ChatListChatBox: React.FC<{
   chat: Chats;
+  selectedChat: string;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
-}> = React.memo(({ chat, setSelectedChat }) => {
+}> = React.memo(({ chat, selectedChat, setSelectedChat }) => {
   const [unseenCount, setUnseenCount] = React.useState<number>(0);
+  const [chatName, setChatName] = React.useState<string>("");
+  const [chatPic, setChatPic] = React.useState<string>("");
+
   React.useEffect(() => {
     const getNumberOfUnseenMessages = async () => {
       if (!chat._id) return;
@@ -41,8 +51,45 @@ const ChatListChatBox: React.FC<{
       }
     };
     getNumberOfUnseenMessages();
-  }, [chat._id]);
-  console.log("unseenCount", unseenCount);
+    if (selectedChat === chat._id) {
+      getNumberOfUnseenMessages();
+    }
+  }, [chat._id, selectedChat]);
+  React.useEffect(() => {
+    if (
+      chat.name &&
+      chat.type === "private" &&
+      chat.participants.length === 1
+    ) {
+      setChatName(chat.name);
+    }
+  }, [chat.name, chat.type, chat.participants.length]);
+  React.useEffect(() => {
+    if (
+      !chat.name &&
+      chat.type === "private" &&
+      chat.participants.length === 1
+    ) {
+      const fetchUser = async () => {
+        try {
+          const res = await axiosInstance.get<ApiResponse<User>>(
+            `/user/${chat.participants[0]}`,
+          );
+          if (res.data.success && res.data.data.fullName) {
+            setChatName(res.data.data.fullName);
+            if (res.data.data.profilePic) {
+              setChatPic(res.data.data.profilePic);
+            } else {
+              setChatPic("");
+            }
+          }
+        } catch (err) {
+          console.log(err.response.data.message);
+        }
+      };
+      fetchUser();
+    }
+  }, [chat.name, chat.type, chat.participants]);
 
   return (
     <div
@@ -50,11 +97,15 @@ const ChatListChatBox: React.FC<{
       className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
     >
       <div className="min-w-10 relative h-10 rounded-full bg-red-400">
-        {unseenCount && <div className="absolute -top-2 -left-2  rounded-full bg-yellow-200 flex justify-center items-center w-6 text-center h-6 text-white">{unseenCount}</div>}
+        {unseenCount && (
+          <div className="absolute -top-2 -left-2  rounded-full bg-yellow-200 flex justify-center items-center w-6 text-center h-6 text-white">
+            {unseenCount}
+          </div>
+        )}
       </div>
       <div className="flex flex-col">
         <span className="font-bold break-all ">
-          {chat?.participants[0] + "sadsadaasda" || "loading"}{" "}
+          {!chat.name ? chatName : chat.name || "user"}{" "}
         </span>
         <span>online</span>
       </div>
@@ -64,7 +115,8 @@ const ChatListChatBox: React.FC<{
 const ChatList: React.FC<{
   me: Me;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
-}> = ({ me, setSelectedChat }) => {
+  selectedChat: string;
+}> = ({ me, setSelectedChat, selectedChat }) => {
   const [chats, setChats] = React.useState<Chats[]>([]);
   const [chatsLoading, setChatsLoading] = React.useState<boolean>(false);
   const getChats = async () => {
@@ -95,6 +147,7 @@ const ChatList: React.FC<{
   React.useEffect(() => {
     getChats();
   }, []);
+
   if (chatsLoading) return <div>loading</div>;
   return (
     <div className="min-h-screen hidden border-r-2 border-slate-100 overflow-y-scroll gap-y-4 max-w-3xs xl:max-w-sm   w-full p-4 bg-white md:flex flex-col">
@@ -133,7 +186,12 @@ const ChatList: React.FC<{
       </div>
       {chats.map((chat, idx) => {
         return (
-          <ChatListChatBox setSelectedChat={setSelectedChat} chat={chat} />
+          <ChatListChatBox
+            key={idx}
+            selectedChat={selectedChat}
+            setSelectedChat={setSelectedChat}
+            chat={chat}
+          />
         );
       })}
     </div>

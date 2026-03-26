@@ -2,6 +2,7 @@ import React from "react";
 import axiosInstance from "../../lib/axios";
 import type { ApiResponse } from "../../lib/apiResponse";
 import ChatCard from "./ChatCard";
+import socket from "../../lib/socket";
 interface Message {
   _id: string;
   senderId: string;
@@ -13,17 +14,18 @@ interface Message {
   seenBy: string[];
 }
 type Me = {
-  _id: string;
+  _id?: string;
   fullName?: string;
   email?: string;
   profilePic?: string;
 };
-const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
-  selectedChat,
-  me,
-}) => {
+const Chatbox: React.FC<{
+  selectedChat: string;
+  me: Me;
+}> = ({ selectedChat, me }) => {
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
+  const [participants, setParticipants] = React.useState<string[]>([]);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
   React.useEffect(() => {
@@ -58,6 +60,10 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
         message: textMessage,
       });
       if (res.data.success) {
+        socket.emit("send-message", {
+          message: res.data.data,
+          chatId: selectedChat,
+        });
         setMessages([...messages, res.data.data]);
       }
     } catch (err) {
@@ -66,10 +72,78 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
       setSendingMessage(false);
     }
   };
-  console.log("messages", messages);
+  const seeMessage = React.useCallback(async () => {
+    try {
+      const res = await axiosInstance.patch<ApiResponse<string>>(
+        `/message/see-messages?chatId=${selectedChat}`,
+      );
+      if (res.data.success) {
+        console.log("successfully seen messages");
+      }
+    } catch (err) {
+      console.log("err", err);
+    }
+  }, [selectedChat]);
+  React.useEffect(() => {
+    if (selectedChat) {
+      socket.emit("join-chat", { chatId: selectedChat });
+    }
+  }, [selectedChat]);
+  React.useEffect(() => {
+    const handleMessage = ({ message }: { message: Message }) => {
+      seeMessage();
+      setMessages((prev) => [...prev, message]);
+    };
 
+    socket.on("receive-message", handleMessage);
+
+    return () => {
+      socket.off("receive-message", handleMessage);
+    };
+  }, [seeMessage]);
+  React.useEffect(() => {
+    const handleMessageSeen = ({
+      userId,
+      chatId,
+    }: {
+      userId: string;
+      chatId: string;
+    }) => {
+      setMessages((prev) => {
+        return prev.map((msg) => {
+          return {
+            ...msg,
+            seenBy: [...msg.seenBy, userId],
+          };
+        });
+      });
+    };
+    socket.on("message-seen", handleMessageSeen);
+    return () => {
+      socket.off("message-seen", handleMessageSeen);
+    };
+  }, []);
+  React.useEffect(() => {
+    if (selectedChat) {
+      seeMessage();
+    }
+  }, [seeMessage, selectedChat]);
+  React.useEffect(() => {
+    const getParticipants = async () => {
+      if (!selectedChat) return;
+      try {
+        const res = await axiosInstance.get<ApiResponse<string[]>>(
+          `/chats/get-participants?chatId=${selectedChat}`,
+        );
+        if (res.data.success) {
+          setParticipants(res.data.data);
+        }
+      } catch (err) {}
+    };
+    getParticipants();
+  }, [selectedChat]);
   return (
-    <div className="min-h-screen flex pb-5  justify-start flex-col items-center min-w-sm bg-white w-full">
+    <div className=" flex pb-5 h-screen justify-start flex-col items-center min-w-sm bg-white w-full">
       {!selectedChat ? (
         <div className="h-full bg-white flex justify-center items-center">
           No chat Selected
@@ -83,9 +157,14 @@ const Chatbox: React.FC<{ selectedChat: string; me: Me }> = ({
               <span>online</span>
             </div>
           </div>
-          <div className="h-full gap-y-2 overflow-y-scroll flex flex-col justify-start  p-2 w-full">
+          <div className=" gap-y-2 overflow-y-scroll flex-1 flex flex-col justify-start  p-2 w-full">
             {messages.map((message, idx) => (
-              <ChatCard key={idx} message={message} me={me} />
+              <ChatCard
+                participants={participants}
+                key={idx}
+                message={message}
+                me={me}
+              />
             ))}
           </div>
           <div className="max-w-[90%] w-full rounded-full  flex justify-center items-center p-3 border  border-slate-200 mt-auto">
