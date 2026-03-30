@@ -70,6 +70,7 @@ const Chatbox: React.FC<{
       if (res.data.success) {
         socket.emit("send-message", {
           message: res.data.data,
+          participants,
           chatId: selectedChat,
         });
         setMessages([...messages, res.data.data]);
@@ -123,14 +124,13 @@ const Chatbox: React.FC<{
       userId: string;
       lastSeen: Date;
     }) => {
-
       if (!selectedChat) return;
       setParticipants((prev) => {
         return prev.map((participant) => {
           if (participant.userId._id.toString() === userId) {
             return {
               ...participant,
-              lastSeen: new Date(lastSeen),
+              lastSeen: lastSeen,
             };
           } else {
             return {
@@ -145,6 +145,8 @@ const Chatbox: React.FC<{
       socket.off("message-seen", handleMessageSeen);
     };
   }, [selectedChat]);
+  console.log("participants", participants);
+
   React.useEffect(() => {
     if (selectedChat) {
       updateLastSeen();

@@ -1,8 +1,8 @@
 import React from "react";
 
-import axios from "axios";
 import type { ApiResponse } from "../../lib/apiResponse";
 import axiosInstance from "../../lib/axios";
+import socket from "../../lib/socket";
 type Me = {
   _id?: string;
   fullName?: string;
@@ -27,6 +27,7 @@ type Participant = {
 };
 interface Chats {
   _id: string;
+  unseenCount?: number;
   participants: Participant[];
   lastMessage: string;
   lastMessageType: LastMessageType;
@@ -39,67 +40,50 @@ const ChatListChatBox: React.FC<{
   chat: Chats;
   selectedChat: string;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
-}> = React.memo(({ chat, selectedChat, setSelectedChat }) => {
-  const [unseenCount, setUnseenCount] = React.useState<number>(0);
-  const [chatName, setChatName] = React.useState<string>("");
-  const [chatPic, setChatPic] = React.useState<string>("");
+  handleSelectedChat: (chatId: string) => void;
+}> = React.memo(
+  ({ chat, selectedChat, setSelectedChat, handleSelectedChat }) => {
+    const [chatName, setChatName] = React.useState<string>("");
+    const [chatPic, setChatPic] = React.useState<string>("");
 
-  React.useEffect(() => {
-    const getNumberOfUnseenMessages = async () => {
-      if (!chat._id) return;
-      try {
-        const res = await axiosInstance.get<ApiResponse<number>>(
-          `/chats/unseen-count?chatId=${chat._id}`,
-        );
-        if (res.data.success) {
-          setUnseenCount(res.data.data);
-        }
-      } catch (err) {
-        console.log("err in chatListBox", err.response);
+    React.useEffect(() => {
+      if (chat.name && chat.type === "group") {
+        setChatName(chat.name);
+      } else if (
+        !chat.name &&
+        chat.type === "private" &&
+        chat.participants.length === 1
+      ) {
+        setChatName(chat.participants[0].userId.fullName);
+        setChatPic(chat.participants[0].userId.profilePic);
       }
-    };
-    getNumberOfUnseenMessages();
-    if (selectedChat === chat._id) {
-      getNumberOfUnseenMessages();
-    }
-  }, [chat._id, selectedChat]);
-  React.useEffect(() => {
-    if (chat.name && chat.type === "group") {
-      setChatName(chat.name);
-    }
-  }, [chat.name, chat.type, chat.participants.length]);
-  React.useEffect(() => {
-    if (
-      !chat.name &&
-      chat.type === "private" &&
-      chat.participants.length === 1
-    ) {
-      setChatName(chat.participants[0].userId.fullName);
-      setChatPic(chat.participants[0].userId.profilePic);
-    }
-  }, [chat.name, chat.type, chat.participants]);
+    }, [chat.name, chat.type, chat.participants]);
+    console.log("chat", chat);
 
-  return (
-    <div
-      onClick={() => setSelectedChat(chat._id)}
-      className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
-    >
-      <div className="min-w-10 relative h-10 rounded-full bg-red-400">
-        {unseenCount && (
-          <div className="absolute -top-2 -left-2  rounded-full bg-yellow-200 flex justify-center items-center w-6 text-center h-6 text-white">
-            {unseenCount}
-          </div>
-        )}
+    return (
+      <div
+        onClick={() => {
+          handleSelectedChat(chat._id);
+        }}
+        className=" flex hover:scale-[1.1] justify-start w-full gap-x-4 items-center"
+      >
+        <div className="min-w-10 relative h-10 rounded-full bg-red-400">
+          {chat?.unseenCount && chat?.unseenCount > 0 && (
+            <div className="absolute -top-2 -left-2  rounded-full bg-yellow-200 flex justify-center items-center w-6 text-center h-6 text-white">
+              {chat.unseenCount}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col">
+          <span className="font-bold break-all ">
+            {!chat.name ? chatName : chat.name || "user"}{" "}
+          </span>
+          <span>online</span>
+        </div>
       </div>
-      <div className="flex flex-col">
-        <span className="font-bold break-all ">
-          {!chat.name ? chatName : chat.name || "user"}{" "}
-        </span>
-        <span>online</span>
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 const ChatList: React.FC<{
   me: Me;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
@@ -116,7 +100,6 @@ const ChatList: React.FC<{
           timeout: 3000,
         },
       );
-      console.log("chats", res.data);
 
       if (res.data.success) {
         setChats(res.data.data);
@@ -136,6 +119,30 @@ const ChatList: React.FC<{
   React.useEffect(() => {
     getChats();
   }, []);
+  React.useEffect(() => {
+    const handleUnseenCount = ({ chatId }: { chatId: string }) => {
+      if (selectedChat === chatId) return;
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat._id === chatId
+            ? { ...chat, unseenCount: (chat.unseenCount || 0) + 1 }
+            : chat,
+        ),
+      );
+    };
+    socket.on("count-unseen", handleUnseenCount);
+    return () => {
+      socket.off("count-unseen", handleUnseenCount);
+    };
+  }, [selectedChat]);
+  const handleSelectedChat = (chatId: string) => {
+    setSelectedChat(chatId);
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat._id === chatId ? { ...chat, unseenCount: 0 } : chat,
+      ),
+    );
+  };
 
   if (chatsLoading) return <div>loading</div>;
   return (
@@ -177,6 +184,7 @@ const ChatList: React.FC<{
         return (
           <ChatListChatBox
             key={idx}
+            handleSelectedChat={handleSelectedChat}
             selectedChat={selectedChat}
             setSelectedChat={setSelectedChat}
             chat={chat}
