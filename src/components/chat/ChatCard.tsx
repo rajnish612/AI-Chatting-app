@@ -32,7 +32,9 @@ const ChatCard: React.FC<{
   const filteredParticipants = participants.filter(
     (participant) => participant.userId._id != me._id,
   );
-  const isSeen = filteredParticipants.some((participant) => message.seenBy.includes(participant.userId._id));
+  const isSeen = filteredParticipants.some(
+    (participant) => participant.lastSeen >= message.createdAt,
+  );
   return (
     <div
       className={`max-w-[50%] w-fit  bg-slate-100 border ${me._id == message.senderId && "ml-auto"} rounded-lg gap-x-2 border-slate-500 flex justify-start items-center p-2`}

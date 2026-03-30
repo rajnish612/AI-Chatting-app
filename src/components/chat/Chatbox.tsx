@@ -80,16 +80,22 @@ const Chatbox: React.FC<{
       setSendingMessage(false);
     }
   };
-  const seeMessage = React.useCallback(async () => {
+  const updateLastSeen = React.useCallback(async () => {
     try {
+      console.log("see message");
+
       const res = await axiosInstance.patch<ApiResponse<string>>(
-        `/message/see-messages?chatId=${selectedChat}`,
+        `/chats/update-lastseen?chatId=${selectedChat}`,
       );
+      console.log("see", res);
+
       if (res.data.success) {
+        console.log("last seen updated");
+
         console.log("successfully seen messages");
       }
     } catch (err) {
-      console.log("err", err);
+      console.log("see message runned", err);
     }
   }, [selectedChat]);
   React.useEffect(() => {
@@ -99,7 +105,7 @@ const Chatbox: React.FC<{
   }, [selectedChat]);
   React.useEffect(() => {
     const handleMessage = ({ message }: { message: Message }) => {
-      seeMessage();
+      updateLastSeen();
       setMessages((prev) => [...prev, message]);
     };
 
@@ -108,21 +114,29 @@ const Chatbox: React.FC<{
     return () => {
       socket.off("receive-message", handleMessage);
     };
-  }, [seeMessage]);
+  }, [updateLastSeen]);
   React.useEffect(() => {
     const handleMessageSeen = ({
       userId,
-      chatId,
+      lastSeen,
     }: {
       userId: string;
-      chatId: string;
+      lastSeen: Date;
     }) => {
-      setMessages((prev) => {
-        return prev.map((msg) => {
-          return {
-            ...msg,
-            seenBy: [...msg.seenBy, userId],
-          };
+
+      if (!selectedChat) return;
+      setParticipants((prev) => {
+        return prev.map((participant) => {
+          if (participant.userId._id.toString() === userId) {
+            return {
+              ...participant,
+              lastSeen: new Date(lastSeen),
+            };
+          } else {
+            return {
+              ...participant,
+            };
+          }
         });
       });
     };
@@ -130,12 +144,12 @@ const Chatbox: React.FC<{
     return () => {
       socket.off("message-seen", handleMessageSeen);
     };
-  }, []);
+  }, [selectedChat]);
   React.useEffect(() => {
     if (selectedChat) {
-      seeMessage();
+      updateLastSeen();
     }
-  }, [seeMessage, selectedChat]);
+  }, [updateLastSeen, selectedChat]);
   React.useEffect(() => {
     const getParticipants = async () => {
       if (!selectedChat) return;
@@ -150,6 +164,7 @@ const Chatbox: React.FC<{
     };
     getParticipants();
   }, [selectedChat]);
+
   return (
     <div className=" flex pb-5 h-screen justify-start flex-col items-center min-w-sm bg-white w-full">
       {!selectedChat ? (
