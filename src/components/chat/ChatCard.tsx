@@ -1,34 +1,15 @@
 import React from "react";
+import type { Me } from "../types/me.type";
+import type { Participant } from "../types/participant.type";
 
-type Me = {
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  profilePic?: string;
-};
-type Participant = {
-  userId: {
-    _id: string;
-    fullName: string;
-    profilePic: string;
-  };
-  lastSeen: Date;
-};
-interface Message {
-  _id: string;
-  senderId: string;
-  text: string;
-  image: string;
-  createdAt: Date;
-  updatedAt: Date;
-  chatId: string;
-  seenBy: string[];
-}
-const ChatCard: React.FC<{
+import type { Message } from "../types/message.type";
+
+interface Props {
   participants: Participant[];
   me: Me;
   message: Message;
-}> = ({ me, message, participants }) => {
+}
+const ChatCard: React.FC<Props> = ({ me, message, participants }) => {
   const filteredParticipants = participants.filter(
     (participant) => participant.userId._id != me._id,
   );

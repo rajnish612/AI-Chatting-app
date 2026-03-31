@@ -3,30 +3,9 @@ import axiosInstance from "../../lib/axios";
 import type { ApiResponse } from "../../lib/apiResponse";
 import ChatCard from "./ChatCard";
 import socket from "../../lib/socket";
-interface Message {
-  _id: string;
-  senderId: string;
-  text: string;
-  image: string;
-  createdAt: Date;
-  updatedAt: Date;
-  chatId: string;
-  seenBy: string[];
-}
-type Me = {
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  profilePic?: string;
-};
-type Participant = {
-  userId: {
-    _id: string;
-    fullName: string;
-    profilePic: string;
-  };
-  lastSeen: Date;
-};
+import type { Participant } from "../types/participant.type";
+import type { Me } from "../types/me.type";
+import type { Message } from "../types/message.type";
 const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;

@@ -3,39 +3,9 @@ import React from "react";
 import type { ApiResponse } from "../../lib/apiResponse";
 import axiosInstance from "../../lib/axios";
 import socket from "../../lib/socket";
-type Me = {
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  profilePic?: string;
-};
-type ChatType = "private" | "group";
-type LastMessageType = "audio" | "image" | "video" | "text";
-type User = {
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  profilePic?: string;
-};
-type Participant = {
-  userId: {
-    _id: string;
-    fullName: string;
-    profilePic: string;
-  };
-  lastSeen: Date;
-};
-interface Chats {
-  _id: string;
-  unseenCount?: number;
-  participants: Participant[];
-  lastMessage: string;
-  lastMessageType: LastMessageType;
-  type: ChatType;
-  createdAt: Date;
-  updatedAt: Date;
-  name?: string;
-}
+import type { Me } from "../types/me.type";
+import type { Chats } from "../types/chat.type";
+
 const ChatListChatBox: React.FC<{
   chat: Chats;
   selectedChat: string;

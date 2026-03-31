@@ -2,18 +2,8 @@ import React from "react";
 import axiosInstance from "../lib/axios";
 import { AuthContext } from "../context/AuthContext";
 import socket from "../lib/socket";
-type Me = {
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  profilePic?: string;
-};
-type ResponseError = {
-  errorType: "none" | "server" | "internet" | "other";
-  err: boolean;
-  message: string;
-  status?: number;
-};
+import type { Me } from "../components/types/me.type";
+import type { ResponseError } from "../components/types/responseError.type";
 
 export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
