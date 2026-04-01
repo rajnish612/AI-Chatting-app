@@ -1,12 +1,11 @@
+import type { Message } from "./message.type";
 import type { Participant } from "./participant.type";
 type ChatType = "private" | "group";
-type LastMessageType = "audio" | "image" | "video" | "text";
 export interface Chats {
   _id: string;
   unseenCount?: number;
   participants: Participant[];
-  lastMessage: string;
-  lastMessageType: LastMessageType;
+  lastMessage: Message;
   type: ChatType;
   createdAt: Date;
   updatedAt: Date;

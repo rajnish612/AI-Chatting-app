@@ -5,30 +5,31 @@ import axiosInstance from "../../lib/axios";
 import socket from "../../lib/socket";
 import type { Me } from "../types/me.type";
 import type { Chats } from "../types/chat.type";
+import { useChat } from "../../hooks/useChat";
 
-const ChatListChatBox: React.FC<{
+interface ChatListProps {
   chat: Chats;
-  selectedChat: string;
-  setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
+  me: Me;
+  // selectedChat: string;
+  // setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
   handleSelectedChat: (chatId: string) => void;
-}> = React.memo(
-  ({ chat, selectedChat, setSelectedChat, handleSelectedChat }) => {
-    const [chatName, setChatName] = React.useState<string>("");
-    const [chatPic, setChatPic] = React.useState<string>("");
-
-    React.useEffect(() => {
-      if (chat.name && chat.type === "group") {
-        setChatName(chat.name);
-      } else if (
-        !chat.name &&
-        chat.type === "private" &&
-        chat.participants.length === 1
-      ) {
-        setChatName(chat.participants[0].userId.fullName);
-        setChatPic(chat.participants[0].userId.profilePic);
+}
+const ChatListChatBox: React.FC<ChatListProps> = React.memo(
+  ({ chat, handleSelectedChat, me }) => {
+    const chatName = React.useMemo(() => {
+      if (chat.type === "group") {
+        return chat.name || "group";
+      } else if (chat.type === "private") {
+        return (
+          chat.participants.filter(
+            (participant) =>
+              participant.userId._id.toString() !== me._id?.toString(),
+          )[0]?.userId.fullName ||
+          chat.name ||
+          "user"
+        );
       }
-    }, [chat.name, chat.type, chat.participants]);
-    console.log("chat", chat);
+    }, [chat.type, chat.name, chat.participants, me]);
 
     return (
       <div
@@ -45,10 +46,8 @@ const ChatListChatBox: React.FC<{
           )}
         </div>
         <div className="flex flex-col">
-          <span className="font-bold break-all ">
-            {!chat.name ? chatName : chat.name || "user"}{" "}
-          </span>
-          <span>online</span>
+          <span className="font-bold break-all ">{chatName}</span>
+          <span>{chat?.lastMessage?.text || "No messages yet"}</span>
         </div>
       </div>
     );
@@ -59,8 +58,8 @@ const ChatList: React.FC<{
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
   selectedChat: string;
 }> = ({ me, setSelectedChat, selectedChat }) => {
-  const [chats, setChats] = React.useState<Chats[]>([]);
   const [chatsLoading, setChatsLoading] = React.useState<boolean>(false);
+  const { chats, setChats } = useChat();
   const getChats = async () => {
     setChatsLoading(true);
     try {
@@ -90,21 +89,35 @@ const ChatList: React.FC<{
     getChats();
   }, []);
   React.useEffect(() => {
-    const handleUnseenCount = ({ chatId }: { chatId: string }) => {
-      if (selectedChat === chatId) return;
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat._id === chatId
-            ? { ...chat, unseenCount: (chat.unseenCount || 0) + 1 }
-            : chat,
-        ),
-      );
+    const handleUpdateChat = ({
+      chatId,
+      updatedChat,
+    }: {
+      chatId: string;
+      updatedChat: Chats;
+    }) => {
+
+      setChats((prevChats) => {
+        return [
+          {
+            ...prevChats.find((chat) => chat._id === chatId),
+            ...updatedChat,
+            unseenCount:
+              selectedChat === chatId
+                ? 0
+                : (prevChats.find((chat) => chat._id === chatId)?.unseenCount ||
+                    0) + 1,
+          },
+          ...prevChats.filter((chat) => chat._id !== chatId),
+        ];
+      });
     };
-    socket.on("count-unseen", handleUnseenCount);
+
+    socket.on("chat-update", handleUpdateChat);
     return () => {
-      socket.off("count-unseen", handleUnseenCount);
+      socket.off("chat-update", handleUpdateChat);
     };
-  }, [selectedChat]);
+  }, [selectedChat, setChats]);
   const handleSelectedChat = (chatId: string) => {
     setSelectedChat(chatId);
     setChats((prevChats) =>
@@ -150,13 +163,14 @@ const ChatList: React.FC<{
           <span>online</span>
         </div>
       </div>
-      {chats.map((chat, idx) => {
+      {chats.map((chat) => {
         return (
           <ChatListChatBox
-            key={idx}
+            key={chat._id}
+            me={me}
             handleSelectedChat={handleSelectedChat}
-            selectedChat={selectedChat}
-            setSelectedChat={setSelectedChat}
+            // selectedChat={selectedChat}
+            // setSelectedChat={setSelectedChat}
             chat={chat}
           />
         );

@@ -6,6 +6,7 @@ import socket from "../../lib/socket";
 import type { Participant } from "../types/participant.type";
 import type { Me } from "../types/me.type";
 import type { Message } from "../types/message.type";
+import { useChat } from "../../hooks/useChat";
 const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;
@@ -15,6 +16,8 @@ const Chatbox: React.FC<{
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
+  const { setChats } = useChat();
+
   React.useEffect(() => {
     const fetchedMessages = async () => {
       if (!selectedChat) return;
@@ -49,9 +52,15 @@ const Chatbox: React.FC<{
       if (res.data.success) {
         socket.emit("send-message", {
           message: res.data.data,
-          participants,
           chatId: selectedChat,
         });
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat._id === selectedChat
+              ? { ...chat, lastMessage: res.data.data, unseenCount: 0 }
+              : chat,
+          ),
+        );
         setMessages([...messages, res.data.data]);
       }
     } catch (err) {
@@ -124,7 +133,6 @@ const Chatbox: React.FC<{
       socket.off("message-seen", handleMessageSeen);
     };
   }, [selectedChat]);
-  console.log("participants", participants);
 
   React.useEffect(() => {
     if (selectedChat) {

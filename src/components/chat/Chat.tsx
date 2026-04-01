@@ -3,6 +3,7 @@ import ChatList from "./ChatList";
 import Chatbox from "./Chatbox";
 import ChatDetails from "./ChatDetails";
 import { useAuth } from "../../hooks/useAuth";
+import { ChatProvider } from "../../providers/chat.provider";
 
 const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = React.useState<string>("");
@@ -13,15 +14,17 @@ const Chat: React.FC = () => {
   if (error.err) return <div>{error.message}</div>;
 
   return (
-    <div className="min-h-screen   h-full w-full flex justify-start items-center bg-slate-100">
-      <ChatList
-        selectedChat={selectedChat}
-        setSelectedChat={setSelectedChat}
-        me={me}
-      />
-      <Chatbox me={me} selectedChat={selectedChat} />
-      <ChatDetails />
-    </div>
+    <ChatProvider>
+      <div className="min-h-screen   h-full w-full flex justify-start items-center bg-slate-100">
+        <ChatList
+          selectedChat={selectedChat}
+          setSelectedChat={setSelectedChat}
+          me={me}
+        />
+        <Chatbox me={me} selectedChat={selectedChat} />
+        <ChatDetails />
+      </div>
+    </ChatProvider>
   );
 };
 

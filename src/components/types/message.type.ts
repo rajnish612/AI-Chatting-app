@@ -3,6 +3,7 @@ export interface Message {
   senderId: string;
   text: string;
   image: string;
+  type: "text" | "image" | "video" | "audio";
   createdAt: Date;
   updatedAt: Date;
   chatId: string;
