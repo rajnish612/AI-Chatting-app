@@ -10,12 +10,13 @@ import { useChat } from "../../hooks/useChat";
 interface ChatListProps {
   chat: Chats;
   me: Me;
+  setChats: React.Dispatch<React.SetStateAction<Chats[]>>;
   // selectedChat: string;
   // setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
   handleSelectedChat: (chatId: string) => void;
 }
 const ChatListChatBox: React.FC<ChatListProps> = React.memo(
-  ({ chat, handleSelectedChat, me }) => {
+  ({ chat, handleSelectedChat, me, setChats }) => {
     const chatName = React.useMemo(() => {
       if (chat.type === "group") {
         return chat.name || "group";
@@ -30,7 +31,24 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
         );
       }
     }, [chat.type, chat.name, chat.participants, me]);
-
+    const handleDeleteChat = async () => {
+      try {
+        const res = await axiosInstance.delete(
+          `/chats/delete-chat?chatId=${chat._id}`,
+        );
+        if (res.data.success) {
+          setChats((prevChats) => prevChats.filter((c) => c._id !== chat._id));
+        }
+      } catch (err: any) {
+        if (err.response) {
+          alert(err.response.data?.message || "Server error");
+        } else if (err.request) {
+          alert("Internet connection problem or server unreachable");
+        } else {
+          alert(err.message || "Something went wrong");
+        }
+      }
+    };
     return (
       <div
         onClick={() => {
@@ -45,8 +63,13 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
             </div>
           )}
         </div>
-        <div className="flex flex-col">
-          <span className="font-bold break-all ">{chatName}</span>
+        <div className="flex w-full  flex-col">
+          <div className="flex  justify-between">
+            <span className="font-bold break-all ">{chatName}</span>
+            <span onClick={() => handleDeleteChat()} className="text-red-500">
+              Delete
+            </span>
+          </div>
           <span>{chat?.lastMessage?.text || "No messages yet"}</span>
         </div>
       </div>
@@ -96,7 +119,6 @@ const ChatList: React.FC<{
       chatId: string;
       updatedChat: Chats;
     }) => {
-
       setChats((prevChats) => {
         return [
           {
@@ -118,6 +140,27 @@ const ChatList: React.FC<{
       socket.off("chat-update", handleUpdateChat);
     };
   }, [selectedChat, setChats]);
+  React.useEffect(() => {
+    const handleUpdateChat = ({
+      chatId,
+      updatedChat,
+    }: {
+      chatId: string;
+      updatedChat: Chats;
+    }) => {
+      setChats((prevChats) => {
+        return prevChats.map((chat) =>
+          chat._id === chatId ? { ...chat, ...updatedChat } : chat,
+        );
+      });
+    };
+
+    socket.on("message-unsend", handleUpdateChat);
+    return () => {
+      socket.off("message-unsend", handleUpdateChat);
+    };
+  }, [selectedChat, setChats]);
+
   const handleSelectedChat = (chatId: string) => {
     setSelectedChat(chatId);
     setChats((prevChats) =>
@@ -167,6 +210,7 @@ const ChatList: React.FC<{
         return (
           <ChatListChatBox
             key={chat._id}
+            setChats={setChats}
             me={me}
             handleSelectedChat={handleSelectedChat}
             // selectedChat={selectedChat}
