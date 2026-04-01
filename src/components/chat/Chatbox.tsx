@@ -1,12 +1,12 @@
 import React from "react";
 import axiosInstance from "../../lib/axios";
 import type { ApiResponse } from "../../lib/apiResponse";
-import ChatCard from "./ChatCard";
 import socket from "../../lib/socket";
 import type { Participant } from "../types/participant.type";
 import type { Me } from "../types/me.type";
 import type { Message } from "../types/message.type";
 import { useChat } from "../../hooks/useChat";
+import MessageCard from "./MessageCard";
 const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;
@@ -153,7 +153,15 @@ const Chatbox: React.FC<{
     };
     getParticipants();
   }, [selectedChat]);
-
+  React.useEffect(() => {
+    const handleMessageUnsent = ({ messageId }: { messageId: string }) => {
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+    };
+    socket.on("message-unsent", handleMessageUnsent);
+    return () => {
+      socket.off("message-unsent", handleMessageUnsent);
+    };
+  }, []);
   return (
     <div className=" flex pb-5 h-screen justify-start flex-col items-center min-w-sm bg-white w-full">
       {!selectedChat ? (
@@ -171,7 +179,8 @@ const Chatbox: React.FC<{
           </div>
           <div className=" gap-y-2 overflow-y-scroll flex-1 flex flex-col justify-start  p-2 w-full">
             {messages.map((message, idx) => (
-              <ChatCard
+              <MessageCard
+                setMessages={setMessages}
                 participants={participants}
                 key={idx}
                 message={message}
