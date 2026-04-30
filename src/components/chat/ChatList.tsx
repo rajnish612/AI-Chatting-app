@@ -169,16 +169,35 @@ const ChatList: React.FC<{
       ),
     );
   };
-
+  const handleLogout = async () => {
+    try {
+      const res = await axiosInstance.get("/auth/sign-out");
+      if (res.data.success) {
+        window.location.href = "/login";
+      }
+    } catch (err: any) {
+      if (err.response) {
+        alert(err.response.data?.message || "Server error");
+      } else if (err.request) {
+        alert("Internet connection problem or server unreachable");
+      } else {
+        alert(err.message || "Something went wrong");
+      }
+    }
+  };
   if (chatsLoading) return <div>loading</div>;
   return (
     <div className="min-h-screen hidden border-r-2 border-slate-100 overflow-y-scroll gap-y-4 max-w-3xs xl:max-w-sm   w-full p-4 bg-white md:flex flex-col">
       <div className=" flex justify-start w-full gap-x-4 items-center">
         <div className="w-10 h-10 rounded-full bg-red-400"></div>
+
         <div className="flex flex-col">
           <span className="font-bold">{me?.fullName || "loading"} </span>
           <span>online</span>
         </div>
+        <span className="text-black cursor-pointer" onClick={handleLogout}>
+          logout
+        </span>
       </div>
       <div className="h-10 flex justify-start px-4 rounded-full scroll-smooth   bg-sky-100 gap-x-4 w-full items-center">
         <input
