@@ -185,6 +185,25 @@ const ChatList: React.FC<{
       }
     }
   };
+  const handleSearchChats = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase();
+    if (value.trim() === "") {
+      getChats();
+      return;
+    }
+    try {
+      const res = await axiosInstance.get<ApiResponse<Chats[]>>(
+        "/chats/search-chats?q=" + value,
+        {
+          timeout: 3000,
+        },
+      );
+      const response = res.data;
+      if (response.success) {
+        setChats(response.data);
+      }
+    } catch (err) {}
+  };
   if (chatsLoading) return <div>loading</div>;
   return (
     <div className="min-h-screen hidden border-r-2 border-slate-100 overflow-y-scroll gap-y-4 max-w-3xs xl:max-w-sm   w-full p-4 bg-white md:flex flex-col">
@@ -201,6 +220,7 @@ const ChatList: React.FC<{
       </div>
       <div className="h-10 flex justify-start px-4 rounded-full scroll-smooth   bg-sky-100 gap-x-4 w-full items-center">
         <input
+          onChange={handleSearchChats}
           type="text"
           placeholder="search"
           name="search"
