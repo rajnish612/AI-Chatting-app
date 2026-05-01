@@ -71,12 +71,9 @@ const Chatbox: React.FC<{
   };
   const updateLastSeen = React.useCallback(async () => {
     try {
-      console.log("see message");
-
       const res = await axiosInstance.patch<ApiResponse<string>>(
         `/chats/update-lastseen?chatId=${selectedChat}`,
       );
-      console.log("see", res);
 
       if (res.data.success) {
         console.log("last seen updated");
@@ -149,7 +146,9 @@ const Chatbox: React.FC<{
         if (res.data.success) {
           setParticipants(res.data.data);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.log("participants err", err.response.data);
+      }
     };
     getParticipants();
   }, [selectedChat]);

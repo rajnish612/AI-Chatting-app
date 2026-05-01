@@ -6,6 +6,7 @@ import socket from "../../lib/socket";
 import type { Me } from "../types/me.type";
 import type { Chats } from "../types/chat.type";
 import { useChat } from "../../hooks/useChat";
+import ChatModel from "./ChatModel";
 
 interface ChatListProps {
   chat: Chats;
@@ -81,6 +82,8 @@ const ChatList: React.FC<{
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
   selectedChat: string;
 }> = ({ me, setSelectedChat, selectedChat }) => {
+  const [newChatModalOpen, setNewChatModalOpen] =
+    React.useState<boolean>(false);
   const [chatsLoading, setChatsLoading] = React.useState<boolean>(false);
   const { chats, setChats } = useChat();
   const getChats = async () => {
@@ -217,6 +220,20 @@ const ChatList: React.FC<{
         <span className="text-black cursor-pointer" onClick={handleLogout}>
           logout
         </span>
+      </div>
+      <div className="flex justify-center items-center">
+        <button
+          className="bg-blue-400"
+          onClick={() => setNewChatModalOpen(true)}
+        >
+          New Chat
+        </button>
+        {newChatModalOpen && (
+          <ChatModel
+            setSelectedChat={setSelectedChat}
+            setNewChatModalOpen={setNewChatModalOpen}
+          />
+        )}
       </div>
       <div className="h-10 flex justify-start px-4 rounded-full scroll-smooth   bg-sky-100 gap-x-4 w-full items-center">
         <input
