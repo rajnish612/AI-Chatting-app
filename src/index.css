@@ -1,1 +1,108 @@
 @import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root {
+  --bg-base:        #0d0f14;
+  --bg-surface:     #13161e;
+  --bg-elevated:    #1a1e28;
+  --bg-hover:       #1f2433;
+  --border:         rgba(255,255,255,0.07);
+  --border-active:  rgba(255,255,255,0.14);
+
+  --accent:         #6c63ff;
+  --accent-light:   #8b83ff;
+  --accent-dim:     rgba(108,99,255,0.18);
+  --accent-glow:    rgba(108,99,255,0.35);
+
+  --text-primary:   #f0f2f8;
+  --text-secondary: #8b90a0;
+  --text-muted:     #4d5266;
+
+  --bubble-out:     #6c63ff;
+  --bubble-out-txt: #ffffff;
+  --bubble-in:      #1f2433;
+  --bubble-in-txt:  #e8ecf5;
+
+  --success:        #34d399;
+  --danger:         #f87171;
+  --warning:        #fbbf24;
+
+  --radius-sm:      8px;
+  --radius-md:      14px;
+  --radius-lg:      20px;
+  --radius-xl:      28px;
+  --radius-full:    9999px;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+  --shadow-accent: 0 0 20px var(--accent-glow);
+}
+
+/* ── Reset / Base ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Utility classes ───────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+.glass-strong {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-active);
+}
+
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.anim-fadeSlideUp { animation: fadeSlideUp 0.28s ease both; }
+.anim-fadeIn      { animation: fadeIn 0.22s ease both; }
+.anim-scaleIn     { animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+/* ── Input focus ring ──────────────────────────────────────── */
+input:focus { outline: none; }
+
+/* ── Selection ─────────────────────────────────────────────── */
+::selection { background: var(--accent-dim); color: var(--text-primary); }
