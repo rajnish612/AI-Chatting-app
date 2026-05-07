@@ -4,8 +4,8 @@ import SignUp from "./components/auth/SignUp";
 import { AuthContextProvider } from "./providers/auth.provider";
 import SignIn from "./components/auth/SignIn";
 import Chat from "./components/chat/Chat";
-
 const App = () => {
+
   return (
     <AuthContextProvider>
         <BrowserRouter>

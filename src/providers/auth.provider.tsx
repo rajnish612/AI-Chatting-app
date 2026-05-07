@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import socket from "../lib/socket";
 import type { Me } from "../components/types/me.type";
 import type { ResponseError } from "../components/types/responseError.type";
+import { connectPeer } from "../lib/peer";
 
 export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -27,6 +28,7 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       if (res.data && res.data.success) {
+        connectPeer(res.data.data._id)
         setMe(res.data.data);
       }
     } catch (err: any) {

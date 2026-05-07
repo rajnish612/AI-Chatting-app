@@ -7,6 +7,8 @@ import type { Me } from "../types/me.type";
 import type { Message } from "../types/message.type";
 import { useChat } from "../../hooks/useChat";
 import MessageCard from "./MessageCard";
+import { peer } from "../../lib/peer";
+import type { MediaConnection } from "peerjs";
 
 const Chatbox: React.FC<{
   selectedChat: string;
@@ -136,8 +138,52 @@ const Chatbox: React.FC<{
       sendTextMessage();
     }
   };
+  const createCall = async () => {
+    const mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
+    
+    const call = peer?.call(participants[0].userId._id.toString(),mediaStream,{
+      metadata:{
+        user:{
+          _id:me._id,
+          username:me.fullName,
+          email:me.email,
+          profilePic:me.profilePic
+        }
+      }
+    });
+    
+    call?.on("stream",async(stream)=>{
+console.log("stream",stream);
 
-  /* ── Empty / no chat selected ── */
+    })
+  };
+ 
+ React.useEffect(() => {
+  if (!peer) return;
+
+  const handleCall = async (call:MediaConnection) => {
+    console.log(call);
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+    call.answer(stream);
+
+    call.on("stream", (remoteStream) => {
+      console.log(remoteStream);
+    });
+  };
+
+  peer.on("call", handleCall);
+
+  return () => {
+    peer?.off("call", handleCall);
+  };
+}, []);
   if (!selectedChat) {
     return (
       <div
@@ -255,6 +301,7 @@ const Chatbox: React.FC<{
             <span style={{ color: "var(--success)", fontSize: 11.5, fontWeight: 500 }}>Online</span>
           </div>
         </div>
+        <button onClick={createCall}>Call</button>
       </div>
 
       {/* ── Messages ── */}
