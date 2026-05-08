@@ -5,18 +5,25 @@ export const connectPeer = (id: string) => {
   if(peer){
     peer.destroy()
   }
-   peer = new Peer(id, {
-    host: "localhost",
-    port: 3000,
-    path:"/peerjs",
-    secure: false,
+  
+  const peerHost = (import.meta.env.VITE_PEER_HOST || "localhost").trim();
+  const peerPort = import.meta.env.VITE_PEER_PORT 
+    ? parseInt(import.meta.env.VITE_PEER_PORT, 10) 
+    : 3000;
+  const peerSecure = import.meta.env.VITE_PEER_SECURE?.trim() === "true";
+  
+  peer = new Peer(id, {
+    host: peerHost,
+    port: peerPort,
+    path: "/peerjs",
+    secure: peerSecure,
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
         ]
     }
-    
   });
+  
   peer.on("open", (id) => {
     console.log("Peer connected:", id);
   });
