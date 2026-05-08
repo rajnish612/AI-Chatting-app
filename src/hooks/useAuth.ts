@@ -23,8 +23,6 @@ export const useAuth = () => {
       pathname !== "/signup"
     ) {
       navigate("/signin");
-    } else if (!error.err && !loading) {
-      navigate("/app/chat");
     }
   }, [error, loading, pathname, navigate]);
 
