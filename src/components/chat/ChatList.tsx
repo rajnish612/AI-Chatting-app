@@ -279,12 +279,14 @@ const ChatList: React.FC<{
   };
 
   const handleLogout = async () => {
-    // navigate immediately, then sign out and refresh auth state in background
+    // Clear token from localStorage
+    localStorage.removeItem('token');
+    // Navigate immediately, then sign out in background
     navigate("/signin", { replace: true });
     try {
       await axiosInstance.get("/auth/sign-out");
     } catch (err: any) {
-      // ignore network errors here; ensure provider state is refreshed
+      // ignore network errors here
     } finally {
       auth?.refreshAuth?.();
     }

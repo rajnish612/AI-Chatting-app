@@ -25,6 +25,10 @@ const SignIn = () => {
     try {
       const res = await axiosInstance.post("/auth/sign-in", credentials);
       if (res.data.success == true) {
+        // Store token in localStorage
+        if (res.data.token) {
+          localStorage.setItem('token', res.data.token);
+        }
         navigate("/app/chat", { replace: true });
         context?.refreshAuth?.();
       }

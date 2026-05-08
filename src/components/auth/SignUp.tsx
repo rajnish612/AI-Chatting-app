@@ -25,12 +25,16 @@ const SignUp = () => {
     try {
       const res = await axiosInstance.post("/auth/sign-up", credentials);
       if (res.data?.success) {
+        // Store token in localStorage
+        if (res.data.token) {
+          localStorage.setItem('token', res.data.token);
+        }
         navigate("/app/chat", { replace: true });
         context?.refreshAuth?.();
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Sign up failed";
-      alert(msg);
+    } catch (err: unknown) {
+      if (err instanceof Error) alert(err.message);
+      else alert("Sign up failed");
     }
   };
   if (!context) return;
