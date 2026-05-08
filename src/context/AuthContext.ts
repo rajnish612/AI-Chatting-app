@@ -18,6 +18,7 @@ interface Auth {
   me: Me;
   peer: Peer | null;
   error: ResponseError;
+  refreshAuth?: () => Promise<void>;
 }
 
 export const AuthContext = React.createContext<Auth | null>(null);

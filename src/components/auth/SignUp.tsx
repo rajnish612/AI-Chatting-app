@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../hooks/useAuth";
 interface credentials {
@@ -9,6 +9,7 @@ interface credentials {
 }
 const SignUp = () => {
   const context = useAuth();
+  const navigate = useNavigate();
   const [credentials, setCredentials] = React.useState<credentials>({
     fullname: "",
     email: "",
@@ -23,12 +24,17 @@ const SignUp = () => {
     e.preventDefault();
     try {
       const res = await axiosInstance.post("/auth/sign-up", credentials);
-    } catch (err) {
-      alert(err.response.data.message);
+      if (res.data?.success) {
+        navigate("/app/chat", { replace: true });
+        context?.refreshAuth?.();
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Sign up failed";
+      alert(msg);
     }
   };
   if (!context) return;
-  const { error, loading, me } = context;
+  const { error } = context;
   if (error) {
     // alert(error);
   }

@@ -6,6 +6,8 @@ import socket from "../../lib/socket";
 import type { Me } from "../types/me.type";
 import type { Chats } from "../types/chat.type";
 import { useChat } from "../../hooks/useChat";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import ChatModel from "./ChatModel";
 
 /* ── Avatar helpers ───────────────────────────────────────── */
@@ -230,6 +232,8 @@ const ChatList: React.FC<{
   const [newChatModalOpen, setNewChatModalOpen] = React.useState(false);
   const [chatsLoading, setChatsLoading] = React.useState(false);
   const { chats, setChats } = useChat();
+  const auth = useAuth();
+  const navigate = useNavigate();
 
   const getChats = async () => {
     setChatsLoading(true);
@@ -275,11 +279,14 @@ const ChatList: React.FC<{
   };
 
   const handleLogout = async () => {
+    // navigate immediately, then sign out and refresh auth state in background
+    navigate("/signin", { replace: true });
     try {
-      const res = await axiosInstance.get("/auth/sign-out");
-      if (res.data.success) window.location.href = "/login";
+      await axiosInstance.get("/auth/sign-out");
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Logout failed");
+      // ignore network errors here; ensure provider state is refreshed
+    } finally {
+      auth?.refreshAuth?.();
     }
   };
 

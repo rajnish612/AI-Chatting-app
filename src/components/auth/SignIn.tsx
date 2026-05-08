@@ -25,10 +25,12 @@ const SignIn = () => {
     try {
       const res = await axiosInstance.post("/auth/sign-in", credentials);
       if (res.data.success == true) {
-        navigate("/sign-in");
+        navigate("/app/chat", { replace: true });
+        context?.refreshAuth?.();
       }
-    } catch (err) {
-      alert(err.response.data.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) alert(err.message);
+      else alert("Sign in failed");
     }
   };
   return (

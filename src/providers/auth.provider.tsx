@@ -35,8 +35,12 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
         setPeer(peerInstance);
 
         setMe(res.data.data);
+        setError({ errorType: "none", err: false, message: "", status: 0 });
       }
     } catch (err: any) {
+      // ensure auth state is cleared when check fails
+      setMe({});
+      setPeer(null);
       if (err.response) {
         setError({
           errorType: "server",
@@ -90,7 +94,7 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [me._id, socketConnected]);
   return (
     <AuthContext.Provider
-      value={{ loading: loading, me: me, error: error, peer: peer }}
+      value={{ loading: loading, me: me, error: error, peer: peer, refreshAuth: checkAuth }}
     >
       {children}
     </AuthContext.Provider>

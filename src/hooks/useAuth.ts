@@ -12,7 +12,7 @@ export const useAuth = () => {
     throw new Error("useAuth must be used inside AuthProvider");
   }
 
-  const { error, loading, me } = context;
+  const { error, loading } = context;
 
   React.useEffect(() => {
     if (
