@@ -6,6 +6,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [chats, setChats] = React.useState<Chats[]>([]);
   const [onCall, setOnCall] = React.useState<boolean>(false);
+  const [currentCall, setCurrentCall] = React.useState<any | null>(null);
+  const [isOutgoing, setIsOutgoing] = React.useState<boolean>(false);
+  const [caller, setCaller] = React.useState<{ fullName?: string; profilePic?: string } | null>(null);
+  const [remoteStream, setRemoteStream] = React.useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = React.useState<MediaStream | null>(null);
   // const handleUpdateChat = ({
   //   chatId,
   //   updatedChat,
@@ -19,7 +24,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   // };
 
   return (
-    <ChatContext.Provider value={{ chats, setChats, onCall,setOnCall }}>
+    <ChatContext.Provider value={{ chats, setChats, onCall, setOnCall, currentCall, setCurrentCall, isOutgoing, setIsOutgoing, caller, setCaller, remoteStream, setRemoteStream, localStream, setLocalStream }}>
       {children}
     </ChatContext.Provider>
   );

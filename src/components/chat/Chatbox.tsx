@@ -7,8 +7,8 @@ import type { Me } from "../types/me.type";
 import type { Message } from "../types/message.type";
 import { useChat } from "../../hooks/useChat";
 import MessageCard from "./MessageCard";
-import type { MediaConnection } from "peerjs";
 import { AuthContext } from "../../context/AuthContext";
+import { ChatContext } from "../../context/Chat.context";
 
 const Chatbox: React.FC<{
   selectedChat: string;
@@ -25,6 +25,7 @@ const Chatbox: React.FC<{
   const inputRef = React.useRef<HTMLInputElement>(null);
   const context = React.useContext(AuthContext);
   const peer = context?.peer;
+  const chatContext = React.useContext(ChatContext);
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -164,15 +165,17 @@ const Chatbox: React.FC<{
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
     });
+    const calleeId = participants?.[0]?.userId?._id?.toString();
+    if (!calleeId || !peer) return;
 
-    const call = peer?.call(
-      participants[0].userId._id.toString(),
+    const call = peer.call(
+      calleeId,
       mediaStream,
       {
         metadata: {
           user: {
             _id: me._id,
-            username: me.fullName,
+            fullName: me.fullName,
             email: me.email,
             profilePic: me.profilePic,
           },
@@ -180,8 +183,25 @@ const Chatbox: React.FC<{
       },
     );
 
-    call?.on("stream", async (stream) => {
-      console.log("stream", stream);
+    // Save call to context so overlay and other UI can access it
+    chatContext?.setLocalStream?.(mediaStream);
+    chatContext?.setCurrentCall?.(call);
+    chatContext?.setOnCall?.(true);
+    chatContext?.setIsOutgoing?.(true);
+    chatContext?.setCaller?.({ fullName: participants?.[0]?.userId?.fullName, profilePic: participants?.[0]?.userId?.profilePic });
+
+    call.on("stream", async (stream) => {
+      chatContext?.setRemoteStream?.(stream);
+    });
+
+    call.on("close", () => {
+      chatContext?.setCurrentCall?.(null);
+      chatContext?.setOnCall?.(false);
+      chatContext?.setIsOutgoing?.(false);
+      chatContext?.setRemoteStream?.(null);
+      // stop local media
+      if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+      chatContext?.setLocalStream?.(null);
     });
   };
 

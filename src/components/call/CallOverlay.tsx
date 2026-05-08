@@ -14,34 +14,47 @@ const CallOverlay: React.FC = () => {
   const peer = authContext?.peer;
   const onCall = chatContext?.onCall ?? false;
   const setOnCall = chatContext?.setOnCall;
+  const currentCall = chatContext?.currentCall ?? null;
+  const setCurrentCall = chatContext?.setCurrentCall;
+  const remoteStream = chatContext?.remoteStream ?? null;
+  const setRemoteStream = chatContext?.setRemoteStream;
+  const setIsOutgoing = chatContext?.setIsOutgoing;
+  const isOutgoing = chatContext?.isOutgoing ?? false;
+  const localStreamContext = chatContext?.localStream ?? null;
 
-  const callRef = React.useRef<MediaConnection | null>(null);
   const localStreamRef = React.useRef<MediaStream | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [caller, setCaller] = React.useState<CallerInfo>({});
 
   const closeOverlay = React.useCallback(() => {
-    callRef.current?.close();
-    callRef.current = null;
+    currentCall?.close?.();
+    setCurrentCall?.(null);
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
     setMuted(false);
     setIsConnecting(false);
     setCaller({});
+    setRemoteStream?.(null);
+    setIsOutgoing?.(false);
     setOnCall?.(false);
-  }, [setOnCall]);
+  }, [currentCall, setOnCall, setCurrentCall, setIsOutgoing, setRemoteStream]);
 
   React.useEffect(() => {
     if (!peer) return;
 
     const handleCall = (call: MediaConnection) => {
-      callRef.current = call;
-
       const metadata = call.metadata as { user?: CallerInfo } | undefined;
       setCaller(metadata?.user ?? {});
+      setCurrentCall?.(call);
       setOnCall?.(true);
+      setIsOutgoing?.(false);
       setIsConnecting(false);
+
+      // ensure we clean up if caller cancels before the receiver answers
+      call.on("close", closeOverlay);
+      call.on("error", closeOverlay);
     };
 
     peer.on("call", handleCall);
@@ -49,7 +62,7 @@ const CallOverlay: React.FC = () => {
     return () => {
       peer.off("call", handleCall);
     };
-  }, [peer, setOnCall]);
+  }, [peer, setOnCall, setCurrentCall, closeOverlay, setIsOutgoing]);
 
   React.useEffect(() => {
     if (!onCall) {
@@ -58,7 +71,8 @@ const CallOverlay: React.FC = () => {
   }, [onCall]);
 
   const handleAccept = async () => {
-    if (!callRef.current || isConnecting) return;
+    const call = currentCall;
+    if (!call || isConnecting) return;
 
     setIsConnecting(true);
 
@@ -70,9 +84,12 @@ const CallOverlay: React.FC = () => {
         track.enabled = !muted;
       });
 
-      callRef.current.answer(stream);
-      callRef.current.on("close", closeOverlay);
-      callRef.current.on("error", closeOverlay);
+      call.answer(stream);
+      call.on("stream", (s: MediaStream) => {
+        setRemoteStream?.(s);
+      });
+      call.on("close", closeOverlay);
+      call.on("error", closeOverlay);
     } catch {
       closeOverlay();
     } finally {
@@ -88,6 +105,12 @@ const CallOverlay: React.FC = () => {
     const nextMuted = !muted;
     setMuted(nextMuted);
 
+    // support both caller (context) and receiver (local ref)
+    if (localStreamContext) {
+      localStreamContext.getAudioTracks().forEach((track) => (track.enabled = !nextMuted));
+      // also update context reference if needed
+      chatContext?.setLocalStream?.(localStreamContext);
+    }
     localStreamRef.current?.getAudioTracks().forEach((track) => {
       track.enabled = !nextMuted;
     });
@@ -95,13 +118,18 @@ const CallOverlay: React.FC = () => {
 
   if (!onCall) return null;
 
-  const remoteName = caller.fullName?.trim() || "Unknown caller";
+  const remoteName = (chatContext?.caller?.fullName ?? caller.fullName)?.trim() || "Unknown caller";
   const initials = remoteName
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "?";
+
+  // determine whether call is answered/connected
+  const answered = isOutgoing ? !!remoteStream : !!localStreamRef.current;
+
+  const handleEndCall = () => closeOverlay();
 
   return (
     <div
@@ -144,9 +172,9 @@ const CallOverlay: React.FC = () => {
               placeItems: "center",
             }}
           >
-            {caller.profilePic ? (
+            {(chatContext?.caller?.profilePic ?? caller.profilePic) ? (
               <img
-                src={caller.profilePic}
+                src={chatContext?.caller?.profilePic ?? caller.profilePic}
                 alt={remoteName}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
@@ -159,13 +187,13 @@ const CallOverlay: React.FC = () => {
 
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-light)" }}>
-              Incoming call
+              {isOutgoing ? "Calling" : "Incoming call"}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>
               {remoteName}
             </div>
             <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-secondary)" }}>
-              {isConnecting ? "Connecting…" : "Ready to answer"}
+              {isOutgoing ? (remoteStream ? "Connected" : "Ringing…") : (isConnecting ? "Connecting…" : answered ? "In call" : "Ready to answer")}
             </div>
           </div>
         </div>
@@ -186,39 +214,81 @@ const CallOverlay: React.FC = () => {
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            onClick={handleAccept}
-            style={{
-              flex: 1,
-              padding: "12px 14px",
-              borderRadius: 16,
-              border: "1px solid rgba(52,211,153,0.35)",
-              background: "rgba(52,211,153,0.14)",
-              color: "#d1fae5",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Accept
-          </button>
+          {!isOutgoing && !answered && (
+            <>
+              <button
+                type="button"
+                onClick={handleAccept}
+                style={{
+                  flex: 1,
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  border: "1px solid rgba(52,211,153,0.35)",
+                  background: "rgba(52,211,153,0.14)",
+                  color: "#d1fae5",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Accept
+              </button>
 
-          <button
-            type="button"
-            onClick={handleDecline}
-            style={{
-              flex: 1,
-              padding: "12px 14px",
-              borderRadius: 16,
-              border: "1px solid rgba(248,113,113,0.35)",
-              background: "rgba(248,113,113,0.14)",
-              color: "#fee2e2",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Decline
-          </button>
+              <button
+                type="button"
+                onClick={handleDecline}
+                style={{
+                  flex: 1,
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  border: "1px solid rgba(248,113,113,0.35)",
+                  background: "rgba(248,113,113,0.14)",
+                  color: "#fee2e2",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Decline
+              </button>
+            </>
+          )}
+
+          {isOutgoing && !answered && (
+            <button
+              type="button"
+              onClick={handleDecline}
+              style={{
+                flex: 1,
+                padding: "12px 14px",
+                borderRadius: 16,
+                border: "1px solid rgba(248,113,113,0.35)",
+                background: "rgba(248,113,113,0.14)",
+                color: "#fee2e2",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          )}
+
+          {answered && (
+            <button
+              type="button"
+              onClick={handleEndCall}
+              style={{
+                flex: 1,
+                padding: "12px 14px",
+                borderRadius: 16,
+                border: "1px solid rgba(248,113,113,0.35)",
+                background: "rgba(248,113,113,0.14)",
+                color: "#fee2e2",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              End call
+            </button>
+          )}
         </div>
 
         <button
@@ -238,6 +308,20 @@ const CallOverlay: React.FC = () => {
         >
           {muted ? "Unmute" : "Mute"}
         </button>
+        {/* hidden audio element to play the remote stream for both caller and receiver */}
+        <audio ref={audioRef} autoPlay style={{ display: "none" }} />
+        {remoteStream && (
+          (() => {
+            if (audioRef.current && audioRef.current.srcObject !== remoteStream) {
+              try {
+                audioRef.current.srcObject = remoteStream;
+              } catch {
+                /* ignore */
+              }
+            }
+            return null;
+          })()
+        )}
       </div>
     </div>
   );
