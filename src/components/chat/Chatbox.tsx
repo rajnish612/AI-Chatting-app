@@ -7,8 +7,8 @@ import type { Me } from "../types/me.type";
 import type { Message } from "../types/message.type";
 import { useChat } from "../../hooks/useChat";
 import MessageCard from "./MessageCard";
-import { peer } from "../../lib/peer";
 import type { MediaConnection } from "peerjs";
+import { AuthContext } from "../../context/AuthContext";
 
 const Chatbox: React.FC<{
   selectedChat: string;
@@ -23,7 +23,8 @@ const Chatbox: React.FC<{
   const { setChats } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
+  const context = React.useContext(AuthContext);
+  const peer = context?.peer;
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -38,7 +39,11 @@ const Chatbox: React.FC<{
         );
         if (res.data.success) setMessages(res.data.data);
       } catch (err: any) {
-        setError(err.response?.data?.message || err.message || "Failed to load messages");
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to load messages",
+        );
       }
     };
     fetchMessages();
@@ -56,10 +61,15 @@ const Chatbox: React.FC<{
         message: draft,
       });
       if (res.data.success) {
-        socket.emit("send-message", { message: res.data.data, chatId: selectedChat });
+        socket.emit("send-message", {
+          message: res.data.data,
+          chatId: selectedChat,
+        });
         setChats((prev) =>
           prev.map((c) =>
-            c._id === selectedChat ? { ...c, lastMessage: res.data.data, unseenCount: 0 } : c,
+            c._id === selectedChat
+              ? { ...c, lastMessage: res.data.data, unseenCount: 0 }
+              : c,
           ),
         );
         setMessages((prev) => [...prev, res.data.data]);
@@ -89,11 +99,19 @@ const Chatbox: React.FC<{
       setMessages((prev) => [...prev, message]);
     };
     socket.on("receive-message", handler);
-    return () => { socket.off("receive-message", handler); };
+    return () => {
+      socket.off("receive-message", handler);
+    };
   }, [updateLastSeen]);
 
   React.useEffect(() => {
-    const handler = ({ userId, lastSeen }: { userId: string; lastSeen: Date }) => {
+    const handler = ({
+      userId,
+      lastSeen,
+    }: {
+      userId: string;
+      lastSeen: Date;
+    }) => {
       if (!selectedChat) return;
       setParticipants((prev) =>
         prev.map((p) =>
@@ -102,7 +120,9 @@ const Chatbox: React.FC<{
       );
     };
     socket.on("message-seen", handler);
-    return () => { socket.off("message-seen", handler); };
+    return () => {
+      socket.off("message-seen", handler);
+    };
   }, [selectedChat]);
 
   React.useEffect(() => {
@@ -129,7 +149,9 @@ const Chatbox: React.FC<{
       setMessages((prev) => prev.filter((m) => m._id !== messageId));
     };
     socket.on("message-unsent", handler);
-    return () => { socket.off("message-unsent", handler); };
+    return () => {
+      socket.off("message-unsent", handler);
+    };
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -142,53 +164,35 @@ const Chatbox: React.FC<{
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
     });
-    
-    const call = peer?.call(participants[0].userId._id.toString(),mediaStream,{
-      metadata:{
-        user:{
-          _id:me._id,
-          username:me.fullName,
-          email:me.email,
-          profilePic:me.profilePic
-        }
-      }
-    });
-    
-    call?.on("stream",async(stream)=>{
-console.log("stream",stream);
 
-    })
-  };
- 
- React.useEffect(() => {
-  if (!peer) return;
+    const call = peer?.call(
+      participants[0].userId._id.toString(),
+      mediaStream,
+      {
+        metadata: {
+          user: {
+            _id: me._id,
+            username: me.fullName,
+            email: me.email,
+            profilePic: me.profilePic,
+          },
+        },
+      },
+    );
 
-  const handleCall = async (call:MediaConnection) => {
-    console.log(call);
-
-    const stream =
-      await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-    call.answer(stream);
-
-    call.on("stream", (remoteStream) => {
-      console.log(remoteStream);
+    call?.on("stream", async (stream) => {
+      console.log("stream", stream);
     });
   };
 
-  peer.on("call", handleCall);
-
-  return () => {
-    peer?.off("call", handleCall);
-  };
-}, []);
   if (!selectedChat) {
     return (
       <div
         style={{
-          flex: 1, height: "100%", display: "flex", flexDirection: "column",
+          flex: 1,
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
           background: "var(--bg-base)",
         }}
       >
@@ -207,41 +211,124 @@ console.log("stream",stream);
           <button
             onClick={onMenuClick}
             style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "var(--bg-elevated)", border: "1px solid var(--border)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "var(--text-secondary)",
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "var(--text-secondary)",
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <line
+                x1="3"
+                y1="6"
+                x2="21"
+                y2="6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="3"
+                y1="12"
+                x2="21"
+                y2="12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="3"
+                y1="18"
+                x2="21"
+                y2="18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
-          <span style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)" }}>Nexus Chat</span>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 16,
+              color: "var(--text-primary)",
+            }}
+          >
+            Nexus Chat
+          </span>
         </div>
 
         {/* Empty state */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
             <div
               style={{
-                width: 72, height: 72, borderRadius: 22,
+                width: 72,
+                height: 72,
+                borderRadius: 22,
                 background: "var(--accent-dim)",
                 border: "1px solid rgba(108,99,255,0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--accent-light)" }}>
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ color: "var(--accent-light)" }}
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontWeight: 700, fontSize: 18, color: "var(--text-primary)", marginBottom: 8 }}>
+              <p
+                style={{
+                  fontWeight: 700,
+                  fontSize: 18,
+                  color: "var(--text-primary)",
+                  marginBottom: 8,
+                }}
+              >
                 Your Messages
               </p>
-              <p style={{ color: "var(--text-secondary)", fontSize: 13.5, lineHeight: 1.6, maxWidth: 240 }}>
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: 13.5,
+                  lineHeight: 1.6,
+                  maxWidth: 240,
+                }}
+              >
                 Select a conversation from the sidebar to start chatting
               </p>
             </div>
@@ -252,12 +339,22 @@ console.log("stream",stream);
   }
 
   return (
-    <div style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", background: "var(--bg-base)", overflow: "hidden" }}>
-
+    <div
+      style={{
+        flex: 1,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "var(--bg-base)",
+        overflow: "hidden",
+      }}
+    >
       {/* ── Chat Header ── */}
       <div
         style={{
-          display: "flex", alignItems: "center", gap: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
           padding: "12px 20px",
           background: "var(--bg-surface)",
           borderBottom: "1px solid var(--border)",
@@ -269,36 +366,105 @@ console.log("stream",stream);
           className="flex md:hidden"
           onClick={onMenuClick}
           style={{
-            width: 34, height: 34, borderRadius: 9,
-            background: "var(--bg-elevated)", border: "1px solid var(--border)",
-            alignItems: "center", justifyContent: "center",
-            cursor: "pointer", color: "var(--text-secondary)", flexShrink: 0,
+            width: 34,
+            height: 34,
+            borderRadius: 9,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border)",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-secondary)",
+            flexShrink: 0,
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line
+              x1="3"
+              y1="6"
+              x2="21"
+              y2="6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <line
+              x1="3"
+              y1="12"
+              x2="21"
+              y2="12"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <line
+              x1="3"
+              y1="18"
+              x2="21"
+              y2="18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
         {/* Avatar */}
         <div
           style={{
-            width: 40, height: 40, borderRadius: "50%",
-            background: "var(--accent)", display: "flex",
-            alignItems: "center", justifyContent: "center",
-            fontWeight: 700, fontSize: 14, color: "#fff", flexShrink: 0,
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "var(--accent)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: 14,
+            color: "#fff",
+            flexShrink: 0,
           }}
         >
           C
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: 14.5, color: "var(--text-primary)" }}>Chat</span>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 14.5,
+              color: "var(--text-primary)",
+            }}
+          >
+            Chat
+          </span>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--success)", flexShrink: 0 }} />
-            <span style={{ color: "var(--success)", fontSize: 11.5, fontWeight: 500 }}>Online</span>
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "var(--success)",
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                color: "var(--success)",
+                fontSize: 11.5,
+                fontWeight: 500,
+              }}
+            >
+              Online
+            </span>
           </div>
         </div>
         <button onClick={createCall}>Call</button>
@@ -325,23 +491,61 @@ console.log("stream",stream);
           }}
         >
           {err && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 16px", borderRadius: 12, margin: "0 auto",
-              background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
-              color: "var(--danger)", fontSize: 13, maxWidth: 380,
-            }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 12,
+                margin: "0 auto",
+                background: "rgba(248,113,113,0.1)",
+                border: "1px solid rgba(248,113,113,0.3)",
+                color: "var(--danger)",
+                fontSize: 13,
+                maxWidth: 380,
+              }}
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <line
+                  x1="12"
+                  y1="8"
+                  x2="12"
+                  y2="12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="12"
+                  y1="16"
+                  x2="12.01"
+                  y2="16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
               </svg>
               {err}
             </div>
           )}
 
           {messages.length === 0 && !err && (
-            <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 13, marginTop: 24 }}>
+            <div
+              style={{
+                textAlign: "center",
+                color: "var(--text-muted)",
+                fontSize: 13,
+                marginTop: 24,
+              }}
+            >
               No messages yet. Say hello! 👋
             </div>
           )}
@@ -362,7 +566,9 @@ console.log("stream",stream);
       {/* ── Composer ── */}
       <div
         style={{
-          display: "flex", alignItems: "center", gap: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
           padding: "12px 16px",
           background: "var(--bg-surface)",
           borderTop: "1px solid var(--border)",
@@ -371,8 +577,12 @@ console.log("stream",stream);
       >
         <div
           style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 12,
-            padding: "11px 16px", borderRadius: 16,
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "11px 16px",
+            borderRadius: 16,
             background: "var(--bg-elevated)",
             border: "1px solid var(--border-active)",
           }}
@@ -385,8 +595,12 @@ console.log("stream",stream);
             placeholder="Type a message…"
             name="message"
             style={{
-              flex: 1, background: "transparent", border: "none",
-              outline: "none", color: "var(--text-primary)", fontSize: 14,
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "var(--text-primary)",
+              fontSize: 14,
             }}
           />
         </div>
@@ -396,33 +610,66 @@ console.log("stream",stream);
           disabled={sendingMessage}
           onClick={sendTextMessage}
           style={{
-            width: 46, height: 46, borderRadius: 14, border: "none",
+            width: 46,
+            height: 46,
+            borderRadius: 14,
+            border: "none",
             background: sendingMessage ? "var(--text-muted)" : "var(--accent)",
             boxShadow: sendingMessage ? "none" : "0 0 16px var(--accent-glow)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             cursor: sendingMessage ? "not-allowed" : "pointer",
-            flexShrink: 0, transition: "all 0.15s",
+            flexShrink: 0,
+            transition: "all 0.15s",
           }}
           onMouseEnter={(e) => {
             if (!sendingMessage) {
-              (e.currentTarget as HTMLElement).style.background = "var(--accent-light)";
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 24px var(--accent-glow)";
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--accent-light)";
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                "0 0 24px var(--accent-glow)";
             }
           }}
           onMouseLeave={(e) => {
             if (!sendingMessage) {
-              (e.currentTarget as HTMLElement).style.background = "var(--accent)";
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px var(--accent-glow)";
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--accent)";
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                "0 0 16px var(--accent-glow)";
             }
           }}
         >
           {sendingMessage ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: "white" }}>
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeDasharray="60" strokeDashoffset="20" strokeLinecap="round" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ color: "white" }}
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeDasharray="60"
+                strokeDashoffset="20"
+                strokeLinecap="round"
+              />
             </svg>
           ) : (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <line x1="22" y1="2" x2="11" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <line
+                x1="22"
+                y1="2"
+                x2="11"
+                y2="13"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
               <polygon points="22 2 15 22 11 13 2 9 22 2" fill="white" />
             </svg>
           )}

@@ -5,21 +5,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [chats, setChats] = React.useState<Chats[]>([]);
-
-  const handleUpdateChat = ({
-    chatId,
-    updatedChat,
-  }: {
-    chatId: string;
-    updatedChat: Chats;
-  }) => {
-    setChats((prevChats) =>
-      prevChats.map((chat) => (chat._id === chatId ? updatedChat : chat)),
-    );
-  };
+  const [onCall, setOnCall] = React.useState<boolean>(false);
+  // const handleUpdateChat = ({
+  //   chatId,
+  //   updatedChat,
+  // }: {
+  //   chatId: string;
+  //   updatedChat: Chats;
+  // }) => {
+  //   setChats((prevChats) =>
+  //     prevChats.map((chat) => (chat._id === chatId ? updatedChat : chat)),
+  //   );
+  // };
 
   return (
-    <ChatContext.Provider value={{ chats, setChats, handleUpdateChat }}>
+    <ChatContext.Provider value={{ chats, setChats, onCall,setOnCall }}>
       {children}
     </ChatContext.Provider>
   );

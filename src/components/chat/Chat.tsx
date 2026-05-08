@@ -4,14 +4,15 @@ import Chatbox from "./Chatbox";
 import ChatDetails from "./ChatDetails";
 import { useAuth } from "../../hooks/useAuth";
 import { ChatProvider } from "../../providers/chat.provider";
-import type { MediaConnection } from "peerjs";
+
+import CallOverlay from "../call/CallOverlay";
 const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = React.useState<string>("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
-
+ 
   const authContext = useAuth();
   const { loading, me, error } = authContext;
- 
+  
   if (loading)
     return (
       <div
@@ -125,6 +126,7 @@ const Chat: React.FC = () => {
 
   return (
     <ChatProvider>
+      <CallOverlay />
       <div
         style={{
           height: "100vh",

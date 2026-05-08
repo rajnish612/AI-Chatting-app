@@ -5,10 +5,12 @@ import socket from "../lib/socket";
 import type { Me } from "../components/types/me.type";
 import type { ResponseError } from "../components/types/responseError.type";
 import { connectPeer } from "../lib/peer";
+import Peer from "peerjs";
 
 export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [peer, setPeer] = React.useState<Peer | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [socketConnected, setIsSocketConnected] = React.useState(
     socket.connected,
@@ -28,7 +30,10 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       if (res.data && res.data.success) {
-        connectPeer(res.data.data._id)
+        const peerInstance = connectPeer(res.data.data._id);
+
+        setPeer(peerInstance);
+
         setMe(res.data.data);
       }
     } catch (err: any) {
@@ -84,7 +89,9 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [me._id, socketConnected]);
   return (
-    <AuthContext.Provider value={{ loading: loading, me: me, error: error }}>
+    <AuthContext.Provider
+      value={{ loading: loading, me: me, error: error, peer: peer }}
+    >
       {children}
     </AuthContext.Provider>
   );

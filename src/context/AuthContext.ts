@@ -1,3 +1,4 @@
+import Peer from "peerjs";
 import React from "react";
 type Me = {
   _id?: string;
@@ -15,6 +16,7 @@ type ResponseError = {
 interface Auth {
   loading: boolean;
   me: Me;
+  peer: Peer | null;
   error: ResponseError;
 }
 
