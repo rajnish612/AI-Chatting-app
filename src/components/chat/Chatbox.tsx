@@ -21,6 +21,8 @@ const Chatbox: React.FC<{
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
   const [unsendingMessageId, setUnsendingMessageId] = React.useState<string | null>(null);
+  const [messagesLoading, setMessagesLoading] = React.useState<boolean>(false);
+  const [participantsLoading, setParticipantsLoading] = React.useState<boolean>(false);
   const { setChats } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -35,6 +37,7 @@ const Chatbox: React.FC<{
     const fetchMessages = async () => {
       if (!selectedChat) return;
       setError("");
+      setMessagesLoading(true);
       try {
         const res = await axiosInstance.get<ApiResponse<Message[]>>(
           `/message/get-messages?chatId=${selectedChat}`,
@@ -46,6 +49,8 @@ const Chatbox: React.FC<{
             err.message ||
             "Failed to load messages",
         );
+      } finally {
+        setMessagesLoading(false);
       }
     };
     fetchMessages();
@@ -77,7 +82,7 @@ const Chatbox: React.FC<{
         setMessages((prev) => [...prev, res.data.data]);
       }
     } catch (err) {
-      console.log("send error", err);
+      setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setSendingMessage(false);
     }
@@ -160,13 +165,20 @@ const Chatbox: React.FC<{
   React.useEffect(() => {
     const getParticipants = async () => {
       if (!selectedChat) return;
+      setParticipantsLoading(true);
       try {
         const res = await axiosInstance.get<ApiResponse<Participant[]>>(
           `/chats/get-participants?chatId=${selectedChat}`,
         );
         if (res.data.success) setParticipants(res.data.data);
       } catch (err: any) {
-        console.log("participants err", err?.response?.data);
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to load participants",
+        );
+      } finally {
+        setParticipantsLoading(false);
       }
     };
     getParticipants();
@@ -537,6 +549,25 @@ const Chatbox: React.FC<{
             flexGrow: 1,
           }}
         >
+          {messagesLoading && !err && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                justifyContent: "center",
+                padding: "12px 0",
+                color: "var(--text-muted)",
+                fontSize: 13,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="54" strokeDashoffset="18" strokeLinecap="round" />
+              </svg>
+              Loading messages...
+            </div>
+          )}
+
           {err && (
             <div
               style={{
@@ -584,7 +615,7 @@ const Chatbox: React.FC<{
             </div>
           )}
 
-          {messages.length === 0 && !err && (
+          {messages.length === 0 && !err && !messagesLoading && (
             <div
               style={{
                 textAlign: "center",
@@ -593,7 +624,7 @@ const Chatbox: React.FC<{
                 marginTop: 24,
               }}
             >
-              No messages yet. Say hello! 👋
+              {participantsLoading ? "Loading conversation..." : "No messages yet. Say hello! 👋"}
             </div>
           )}
 

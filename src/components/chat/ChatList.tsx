@@ -33,11 +33,13 @@ interface ChatListProps {
   me: Me;
   setChats: React.Dispatch<React.SetStateAction<Chats[]>>;
   handleSelectedChat: (chatId: string) => void;
+  handleDeleteChat: (chatId: string) => void;
+  deletingChatId: string | null;
   isSelected: boolean;
 }
 
 const ChatListChatBox: React.FC<ChatListProps> = React.memo(
-  ({ chat, handleSelectedChat, me, setChats, isSelected }) => {
+  ({ chat, handleSelectedChat, handleDeleteChat, deletingChatId, me, setChats, isSelected }) => {
     const chatName = React.useMemo(() => {
       if (chat.type === "group") {
         return chat.name || "Group";
@@ -53,16 +55,9 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
       return "Chat";
     }, [chat.type, chat.name, chat.participants, me]);
 
-    const handleDeleteChat = async (e: React.MouseEvent) => {
+    const handleDeleteClick = async (e: React.MouseEvent) => {
       e.stopPropagation();
-      try {
-        const res = await axiosInstance.delete(`/chats/delete-chat?chatId=${chat._id}`);
-        if (res.data.success) {
-          setChats((prev) => prev.filter((c) => c._id !== chat._id));
-        }
-      } catch (err: any) {
-        alert(err.response?.data?.message || err.message || "Something went wrong");
-      }
+      handleDeleteChat(chat._id);
     };
 
     const name = chatName ?? "Chat";
@@ -167,30 +162,39 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
             </span>
             {/* Delete - hover only */}
             <button
-              onClick={handleDeleteChat}
+              onClick={handleDeleteClick}
               title="Delete chat"
               className="group-hover:opacity-100"
               style={{
-                opacity: 0,
+                opacity: deletingChatId === chat._id ? 0.7 : 0,
                 flexShrink: 0,
                 background: "transparent",
                 border: "none",
-                cursor: "pointer",
+                cursor: deletingChatId === chat._id ? "not-allowed" : "pointer",
                 padding: 4,
                 borderRadius: 6,
                 color: "var(--danger)",
                 transition: "opacity 0.15s",
               }}
+              disabled={deletingChatId === chat._id}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = "1";
+                if (deletingChatId !== chat._id) {
+                  (e.currentTarget as HTMLElement).style.opacity = "1";
+                }
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              {deletingChatId === chat._id ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="56" strokeDashoffset="18" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              )}
             </button>
           </div>
           <span
@@ -231,21 +235,43 @@ const ChatList: React.FC<{
 }> = ({ me, setSelectedChat, selectedChat, mobileOpen, setMobileOpen }) => {
   const [newChatModalOpen, setNewChatModalOpen] = React.useState(false);
   const [chatsLoading, setChatsLoading] = React.useState(false);
+  const [chatsError, setChatsError] = React.useState<string>("");
+  const [deletingChatId, setDeletingChatId] = React.useState<string | null>(null);
   const { chats, setChats } = useChat();
   const auth = useAuth();
   const navigate = useNavigate();
 
   const getChats = async () => {
     setChatsLoading(true);
+    setChatsError("");
     try {
       const res = await axiosInstance.get<ApiResponse<Chats[]>>("/chats/get-chats", { timeout: 5000 });
       if (res.data.success) setChats(res.data.data);
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Failed to load chats");
+      setChatsError(err.response?.data?.message || err.message || "Failed to load chats");
     } finally {
       setChatsLoading(false);
     }
   };
+
+  const handleDeleteChat = React.useCallback(
+    async (chatId: string) => {
+      setDeletingChatId(chatId);
+      setChatsError("");
+      try {
+        const res = await axiosInstance.delete(`/chats/delete-chat?chatId=${chatId}`);
+        if (res.data.success) {
+          setChats((prev) => prev.filter((c) => c._id !== chatId));
+          if (selectedChat === chatId) setSelectedChat("");
+        }
+      } catch (err: any) {
+        setChatsError(err.response?.data?.message || err.message || "Something went wrong");
+      } finally {
+        setDeletingChatId(null);
+      }
+    },
+    [selectedChat, setChats, setSelectedChat],
+  );
 
   React.useEffect(() => { getChats(); }, []);
 
@@ -303,11 +329,17 @@ const ChatList: React.FC<{
 
   const handleSearchChats = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
-    if (value.trim() === "") { getChats(); return; }
+    if (value.trim() === "") {
+      getChats();
+      return;
+    }
+    setChatsError("");
     try {
       const res = await axiosInstance.get<ApiResponse<Chats[]>>("/chats/search-chats?q=" + value, { timeout: 3000 });
       if (res.data.success) setChats(res.data.data);
-    } catch {}
+    } catch (err: any) {
+      setChatsError(err.response?.data?.message || err.message || "Search failed");
+    }
   };
 
   const myInitials = getInitials(me?.fullName || "U");
@@ -497,6 +529,23 @@ const ChatList: React.FC<{
 
         {/* ── Chat list ── */}
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
+          {chatsError && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(248,113,113,0.1)",
+                border: "1px solid rgba(248,113,113,0.25)",
+                color: "var(--danger)",
+                fontSize: 12.5,
+                lineHeight: 1.45,
+              }}
+            >
+              {chatsError}
+            </div>
+          )}
+
           {chatsLoading ? (
             <><SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
           ) : chats.length === 0 ? (
@@ -515,6 +564,8 @@ const ChatList: React.FC<{
                 setChats={setChats}
                 me={me}
                 handleSelectedChat={handleSelectedChat}
+                handleDeleteChat={handleDeleteChat}
+                deletingChatId={deletingChatId}
                 chat={chat}
                 isSelected={selectedChat === chat._id}
               />

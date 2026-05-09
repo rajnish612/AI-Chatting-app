@@ -10,18 +10,24 @@ interface credentials {
 const SignIn = () => {
   const navigate = useNavigate();
   const context = useAuth();
+  const { me, loading } = context || { me: {}, loading: false };
 
   const [credentials, setCredentials] = React.useState<credentials>({
     email: "",
     password: "",
   });
+  const [submitError, setSubmitError] = React.useState<string>("");
+  const [submitting, setSubmitting] = React.useState<boolean>(false);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.name as keyof credentials;
     const value: string = e.target.value;
+    if (submitError) setSubmitError("");
     setCredentials((prev) => ({ ...prev, [name]: value }));
   };
-  const handleSignIn = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError("");
     try {
       const res = await axiosInstance.post("/auth/sign-in", credentials);
       if (res.data.success == true) {
@@ -33,10 +39,19 @@ const SignIn = () => {
         context?.refreshAuth?.();
       }
     } catch (err: unknown) {
-      if (err instanceof Error) alert(err.message);
-      else alert("Sign in failed");
+      setSubmitError(
+        err instanceof Error ? err.message : "Sign in failed",
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  React.useEffect(() => {
+    if (!loading && me?._id) {
+      navigate("/app/chat", { replace: true });
+    }
+  }, [me, loading, navigate]);
   return (
     <div
       className="min-h-screen w-full flex justify-center items-center relative overflow-hidden"
@@ -112,6 +127,22 @@ const SignIn = () => {
           onSubmit={handleSignIn}
           className="flex w-full flex-col gap-4"
         >
+          {submitError && (
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(248,113,113,0.1)",
+                border: "1px solid rgba(248,113,113,0.25)",
+                color: "var(--danger)",
+                fontSize: 12.5,
+                lineHeight: 1.45,
+              }}
+            >
+              {submitError}
+            </div>
+          )}
+
           {/* Email */}
           <div className="flex flex-col gap-1.5">
             <label
@@ -194,23 +225,29 @@ const SignIn = () => {
           <button
             id="signin-submit"
             type="submit"
+            disabled={submitting}
             className="w-full py-3 rounded-xl font-semibold text-white transition-all duration-200 mt-1"
             style={{
-              background: "var(--accent)",
-              boxShadow: "var(--shadow-accent)",
+              background: submitting ? "var(--text-muted)" : "var(--accent)",
+              boxShadow: submitting ? "none" : "var(--shadow-accent)",
               fontSize: 15,
               letterSpacing: "0.01em",
+              cursor: submitting ? "not-allowed" : "pointer",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 28px var(--accent-glow)";
+              if (!submitting) {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 28px var(--accent-glow)";
+              }
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "var(--accent)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--shadow-accent)";
+              if (!submitting) {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--shadow-accent)";
+              }
             }}
           >
-            Sign In
+            {submitting ? "Signing In..." : "Sign In"}
           </button>
 
           {/* Divider */}

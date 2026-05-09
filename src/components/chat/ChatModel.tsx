@@ -19,17 +19,20 @@ const getInitials = (name: string) =>
 interface UserProps extends User {
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
   setNewChatModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setError: React.Dispatch<React.SetStateAction<string>>;
 }
 const UserCard: React.FC<UserProps> = ({
   setSelectedChat,
   fullName,
   _id,
   setNewChatModalOpen,
+  setError,
 }) => {
   const [loading, setLoading] = React.useState(false);
 
   const handleSelectChat = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await axiosInstance.get<ApiResponse<Chats>>(
         "/chats/create-or-get-private-chat?userId=" + _id,
@@ -40,7 +43,7 @@ const UserCard: React.FC<UserProps> = ({
         setSelectedChat(res.data.data._id);
       }
     } catch (err) {
-      console.log(err.response.data);
+      setError(err?.response?.data?.message || err?.message || "Failed to open conversation");
     } finally {
       setLoading(false);
     }
@@ -112,15 +115,18 @@ const ChatModel: React.FC<ChatModelProps> = ({
 }) => {
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string>("");
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await axiosInstance.get<ApiResponse<User[]>>("/user");
       if (res.data.success) {
         setUsers(res.data.data);
       }
-    } catch (err) {
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || "Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -182,6 +188,23 @@ const ChatModel: React.FC<ChatModelProps> = ({
 
         {/* Users list */}
         <div className="px-3 py-3 flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 360 }}>
+          {error && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(248,113,113,0.1)",
+                border: "1px solid rgba(248,113,113,0.25)",
+                color: "var(--danger)",
+                fontSize: 12.5,
+                lineHeight: 1.45,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {loading ? (
             [1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-2.5">
@@ -206,6 +229,7 @@ const ChatModel: React.FC<ChatModelProps> = ({
                 key={user._id}
                 {...user}
                 setSelectedChat={setSelectedChat}
+                setError={setError}
               />
             ))
           )}
