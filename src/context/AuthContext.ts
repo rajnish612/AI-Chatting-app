@@ -5,6 +5,7 @@ type Me = {
   fullName?: string;
   email?: string;
   profilePic?: string;
+  botOn?: boolean;
 };
 type ResponseError = {
   errorType: "none" | "server" | "internet" | "other";

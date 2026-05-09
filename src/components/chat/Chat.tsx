@@ -174,9 +174,11 @@ const Chat: React.FC = () => {
         </div>
 
         {/* Right details panel — hidden on small screens */}
-        <div className="hidden lg:flex" style={{ flexShrink: 0 }}>
-          <ChatDetails />
-        </div>
+        {selectedChat && (
+          <div className="hidden lg:flex" style={{ flexShrink: 0 }}>
+            <ChatDetails selectedChat={selectedChat} me={me} />
+          </div>
+        )}
       </div>
     </ChatProvider>
   );

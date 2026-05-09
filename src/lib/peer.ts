@@ -25,11 +25,11 @@ export const connectPeer = (id: string) => {
   });
   
   peer.on("open", (id) => {
-    console.log("Peer connected:", id);
+    
   });
 
   peer.on("error", (err) => {
-    console.log("Peer error:", err);
+    
   });
 
   return peer;

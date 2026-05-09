@@ -3,6 +3,7 @@ export type Participant = {
     _id: string;
     fullName: string;
     profilePic: string;
+    isOnline?: boolean;
   };
   lastSeen: Date;
 };

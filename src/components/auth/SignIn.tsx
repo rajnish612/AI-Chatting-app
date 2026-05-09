@@ -33,15 +33,13 @@ const SignIn = () => {
       if (res.data.success == true) {
         // Store token in localStorage
         if (res.data.token) {
-          localStorage.setItem('token', res.data.token);
+          localStorage.setItem("token", res.data.token);
         }
         navigate("/app/chat", { replace: true });
         context?.refreshAuth?.();
       }
     } catch (err: unknown) {
-      setSubmitError(
-        err instanceof Error ? err.message : "Sign in failed",
-      );
+      setSubmitError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
       setSubmitting(false);
     }
@@ -54,17 +52,22 @@ const SignIn = () => {
   }, [me, loading, navigate]);
   return (
     <div
-      className="min-h-screen w-full flex justify-center items-center relative overflow-hidden"
-      style={{ background: "var(--bg-base)" }}
+      className="min-h-screen w-full flex justify-center items-center relative overflow-hidden  px-4 py-8 sm:py-10"
+      style={{
+        background: "var(--bg-base)",
+        padding: "clamp(16px, 4vw, 28px)",
+      }}
     >
       {/* Background glow orbs */}
       <div
-        className="absolute pointer-events-none"
+        className="absolute  pointer-events-none"
         style={{
           width: 520,
           height: 520,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(108,99,255,0.18) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(108,99,255,0.18) 0%, transparent 70%)",
+
           top: "-120px",
           left: "-120px",
           filter: "blur(40px)",
@@ -76,7 +79,8 @@ const SignIn = () => {
           width: 400,
           height: 400,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%)",
           bottom: "-100px",
           right: "-80px",
           filter: "blur(40px)",
@@ -84,8 +88,11 @@ const SignIn = () => {
       />
 
       <div
-        className="anim-scaleIn relative w-full mx-4 flex flex-col gap-6 p-8 rounded-2xl"
+        className="anim-scaleIn relative w-full flex flex-col gap-6 p-5  sm:p-8 rounded-2xl"
         style={{
+          width: "min(100%, 440px)",
+          padding: "clamp(18px, 3.8vw, 34px)",
+
           maxWidth: 440,
           background: "var(--bg-surface)",
           border: "1px solid var(--border-active)",
@@ -93,7 +100,7 @@ const SignIn = () => {
         }}
       >
         {/* Logo / Brand */}
-        <div className="flex flex-col items-center gap-3 mb-2">
+        <div className="flex flex-col   items-center gap-3 mb-2">
           <div
             style={{
               width: 52,
@@ -107,7 +114,10 @@ const SignIn = () => {
             }}
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="white" />
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                fill="white"
+              />
             </svg>
           </div>
           <div className="text-center">
@@ -117,16 +127,19 @@ const SignIn = () => {
             >
               Welcome back
             </h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: 14, marginTop: 4 }}>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: 14,
+                marginTop: 4,
+              }}
+            >
               Sign in to continue to Nexus Chat
             </p>
           </div>
         </div>
 
-        <form
-          onSubmit={handleSignIn}
-          className="flex w-full flex-col gap-4"
-        >
+        <form onSubmit={handleSignIn} className="flex w-full flex-col gap-4">
           {submitError && (
             <div
               style={{
@@ -147,7 +160,12 @@ const SignIn = () => {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="email"
-              style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", letterSpacing: "0.02em" }}
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--text-secondary)",
+                letterSpacing: "0.02em",
+              }}
             >
               Email address
             </label>
@@ -157,12 +175,30 @@ const SignIn = () => {
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border)",
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "var(--accent)")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "var(--border)")
+              }
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color: "var(--text-muted)" }}>
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" />
-                <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ flexShrink: 0, color: "var(--text-muted)" }}
+              >
+                <path
+                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <polyline
+                  points="22,6 12,13 2,6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
               </svg>
               <input
                 onChange={handleChange}
@@ -186,7 +222,12 @@ const SignIn = () => {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="password"
-              style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", letterSpacing: "0.02em" }}
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--text-secondary)",
+                letterSpacing: "0.02em",
+              }}
             >
               Password
             </label>
@@ -196,12 +237,35 @@ const SignIn = () => {
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border)",
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "var(--accent)")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "var(--border)")
+              }
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color: "var(--text-muted)" }}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ flexShrink: 0, color: "var(--text-muted)" }}
+              >
+                <rect
+                  x="3"
+                  y="11"
+                  width="18"
+                  height="11"
+                  rx="2"
+                  ry="2"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M7 11V7a5 5 0 0 1 10 0v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
               </svg>
               <input
                 onChange={handleChange}
@@ -236,14 +300,18 @@ const SignIn = () => {
             }}
             onMouseEnter={(e) => {
               if (!submitting) {
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 28px var(--accent-glow)";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "var(--accent-light)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "0 0 28px var(--accent-glow)";
               }
             }}
             onMouseLeave={(e) => {
               if (!submitting) {
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--shadow-accent)";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "var(--accent)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "var(--shadow-accent)";
               }
             }}
           >
@@ -258,13 +326,38 @@ const SignIn = () => {
           </div>
 
           {/* Link */}
-          <p className="text-center" style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+          <p
+            className="text-center"
+            style={{ color: "var(--text-secondary)", fontSize: 13 }}
+          >
             Don't have an account?{" "}
             <Link
               to="/signup"
-              style={{ color: "var(--accent-light)", fontWeight: 600, textDecoration: "none" }}
+              style={{
+                color: "var(--accent-light)",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
             >
               Create one
+            </Link>
+          </p>
+
+          {/* Forgot Password */}
+          <p
+            className="text-center"
+            style={{ color: "var(--text-secondary)", fontSize: 13 }}
+          >
+            Forgot your password?{" "}
+            <Link
+              to="/forgot-password"
+              style={{
+                color: "var(--accent-light)",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Reset it
             </Link>
           </p>
         </form>

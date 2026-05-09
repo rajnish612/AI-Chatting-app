@@ -3,4 +3,5 @@ export type Me = {
   fullName?: string;
   email?: string;
   profilePic?: string;
+  botOn?: boolean;
 };

@@ -12,8 +12,27 @@ const avatarColor = (str: string) =>
   AVATAR_COLORS[
     str.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % AVATAR_COLORS.length
   ];
-const getInitials = (name: string) =>
-  name.split(" ").slice(0, 2).map((n) => n[0]?.toUpperCase() ?? "").join("");
+const getInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return (parts[0][0] || "").toUpperCase();
+  const first = parts[0][0] || "";
+  const last = parts[parts.length - 1][0] || "";
+  return (first + last).toUpperCase();
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = error as { response?: { data?: { message?: string } } };
+    return response.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+};
 
 /* ── UserCard ─────────────────────────────────────────────── */
 interface UserProps extends User {
@@ -42,8 +61,8 @@ const UserCard: React.FC<UserProps> = ({
         setNewChatModalOpen(false);
         setSelectedChat(res.data.data._id);
       }
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Failed to open conversation");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to open conversation"));
     } finally {
       setLoading(false);
     }
@@ -67,7 +86,7 @@ const UserCard: React.FC<UserProps> = ({
       onClick={handleSelectChat}
     >
       <div
-        className="flex items-center justify-center rounded-full font-semibold text-white flex-shrink-0"
+        className="flex items-center justify-center rounded-full font-semibold text-white shrink-0"
         style={{ width: 38, height: 38, background: color, fontSize: 14 }}
       >
         {initials}
@@ -81,7 +100,7 @@ const UserCard: React.FC<UserProps> = ({
       <button
         onClick={(e) => { e.stopPropagation(); handleSelectChat(); }}
         disabled={loading}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 flex-shrink-0"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 shrink-0"
         style={{
           background: "var(--accent-dim)",
           color: "var(--accent-light)",
@@ -125,8 +144,8 @@ const ChatModel: React.FC<ChatModelProps> = ({
       if (res.data.success) {
         setUsers(res.data.data);
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to load users");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to load users"));
     } finally {
       setLoading(false);
     }
@@ -138,14 +157,20 @@ const ChatModel: React.FC<ChatModelProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-center items-center anim-fadeIn"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-50 flex justify-center items-center anim-fadeIn p-4 sm:p-6"
+      style={{
+        background: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(8px)",
+        padding: "clamp(14px, 3.5vw, 28px)",
+      }}
       onClick={() => setNewChatModalOpen(false)}
     >
       <div
-        className="anim-scaleIn flex flex-col w-full mx-4 rounded-2xl overflow-hidden"
+        className="anim-scaleIn flex flex-col w-full rounded-2xl overflow-hidden"
         style={{
+          width: "min(100%, 420px)",
           maxWidth: 420,
+          maxHeight: "min(560px, 88vh)",
           background: "var(--bg-surface)",
           border: "1px solid var(--border-active)",
           boxShadow: "var(--shadow-lg)",
@@ -187,7 +212,7 @@ const ChatModel: React.FC<ChatModelProps> = ({
         </div>
 
         {/* Users list */}
-        <div className="px-3 py-3 flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 360 }}>
+        <div className="px-3 py-3 flex flex-col gap-1 overflow-y-auto" style={{ flex: 1, minHeight: 120 }}>
           {error && (
             <div
               style={{

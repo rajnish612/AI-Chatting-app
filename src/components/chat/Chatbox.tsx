@@ -10,6 +10,19 @@ import MessageCard from "./MessageCard";
 import { AuthContext } from "../../context/AuthContext";
 import { ChatContext } from "../../context/Chat.context";
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = error as { response?: { data?: { message?: string } } };
+    return response.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+};
+
 const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;
@@ -28,9 +41,11 @@ const Chatbox: React.FC<{
   const [messagesLoading, setMessagesLoading] = React.useState<boolean>(false);
   const [participantsLoading, setParticipantsLoading] =
     React.useState<boolean>(false);
+  const [sendingImage, setSendingImage] = React.useState<boolean>(false);
   const { setChats } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
   const context = React.useContext(AuthContext);
   const peer = context?.peer;
   const chatContext = React.useContext(ChatContext);
@@ -57,12 +72,8 @@ const Chatbox: React.FC<{
           scrollToBottom();
           setInitialLoad(false);
         }, 500);
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            "Failed to load messages",
-        );
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, "Failed to load messages"));
       } finally {
         setMessagesLoading(false);
       }
@@ -93,10 +104,13 @@ const Chatbox: React.FC<{
               : c,
           ),
         );
-        setMessages((prev) => [...prev, res.data.data]);
+        setMessages((prev) => {
+          if (prev.some((m) => m._id === res.data.data._id)) return prev;
+          return [...prev, res.data.data];
+        });
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to send message"));
     } finally {
       setSendingMessage(false);
     }
@@ -117,12 +131,8 @@ const Chatbox: React.FC<{
         if (res.data.success) {
           setMessages((prev) => prev.filter((m) => m._id !== messageId));
         }
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            "Failed to delete message",
-        );
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, "Failed to delete message"));
       } finally {
         setUnsendingMessageId(null);
       }
@@ -135,7 +145,9 @@ const Chatbox: React.FC<{
       await axiosInstance.patch<ApiResponse<string>>(
         `/chats/update-lastseen?chatId=${selectedChat}`,
       );
-    } catch {}
+    } catch (error: unknown) {
+      void error;
+    }
   }, [selectedChat]);
 
   React.useEffect(() => {
@@ -145,7 +157,10 @@ const Chatbox: React.FC<{
   React.useEffect(() => {
     const handler = ({ message }: { message: Message }) => {
       updateLastSeen();
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === message._id)) return prev;
+        return [...prev, message];
+      });
     };
     socket.on("receive-message", handler);
     return () => {
@@ -187,12 +202,8 @@ const Chatbox: React.FC<{
           `/chats/get-participants?chatId=${selectedChat}`,
         );
         if (res.data.success) setParticipants(res.data.data);
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            "Failed to load participants",
-        );
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, "Failed to load participants"));
       } finally {
         setParticipantsLoading(false);
       }
@@ -210,12 +221,81 @@ const Chatbox: React.FC<{
     };
   }, []);
 
+  React.useEffect(() => {
+    const handler = ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {
+      setParticipants((prev) =>
+        prev.map((participant) =>
+          participant.userId._id.toString() === userId
+            ? { ...participant, userId: { ...participant.userId, isOnline } }
+            : participant,
+        ),
+      );
+    };
+
+    socket.on("presence-update", handler);
+    return () => {
+      socket.off("presence-update", handler);
+    };
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendTextMessage();
     }
   };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSendingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const imageBase64 = reader.result as string;
+          const res = await axiosInstance.post("/message/send/image-message", {
+            chatId: selectedChat,
+            imageBase64,
+          });
+
+          if (res.data.success) {
+            socket.emit("send-message", {
+              message: res.data.data,
+              chatId: selectedChat,
+            });
+            setChats((prev) =>
+              prev.map((c) =>
+                c._id === selectedChat
+                  ? { ...c, lastMessage: res.data.data, unseenCount: 0 }
+                  : c,
+              ),
+            );
+            setMessages((prev) => {
+              if (prev.some((m) => m._id === res.data.data._id)) return prev;
+              return [...prev, res.data.data];
+            });
+          }
+        } catch (error: unknown) {
+          setError(getErrorMessage(error, "Failed to send image"));
+        } finally {
+          setSendingImage(false);
+          if (imageInputRef.current) imageInputRef.current.value = "";
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to process image"));
+      setSendingImage(false);
+    }
+  };
+
+  const handleImageClick = () => {
+    imageInputRef.current?.click();
+  };
+  const chatPartner = participants[0]?.userId;
+  const chatPartnerStatus = chatPartner?.isOnline ? "Online" : "Offline";
   const createCall = async () => {
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -261,7 +341,7 @@ const Chatbox: React.FC<{
   const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const div = e.currentTarget;
 
-    if (div.scrollTop <= 0 && !messagesLoading && !initialLoad) {
+        if (div.scrollTop <= 0 && !messagesLoading && !initialLoad) {
       const newSkip = skipRef.current + 10;
       const previousHeight = div.scrollHeight;
       setMessagesLoading(true);
@@ -277,7 +357,7 @@ const Chatbox: React.FC<{
           div.scrollTop = div.scrollHeight - previousHeight;
         }, 0);
       } catch (err) {
-        console.log(err);
+        setError(err instanceof Error ? err.message : "Failed to load more messages");
       } finally {
         setMessagesLoading(false);
       }
@@ -521,9 +601,21 @@ const Chatbox: React.FC<{
             fontSize: 14,
             color: "#fff",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          C
+          {(() => {
+            const name = chatPartner?.fullName || "U";
+            const avatarUrl = chatPartner?.profilePic;
+            const parts = name.trim().split(/\s+/).filter(Boolean);
+            const initials = parts.length === 1 ? (parts[0][0] || "").toUpperCase() : ((parts[0][0] || "") + (parts[parts.length - 1][0] || "")).toUpperCase();
+            if (avatarUrl) {
+              return (
+                <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} draggable={false} />
+              );
+            }
+            return initials;
+          })()}
         </div>
 
         <div
@@ -542,7 +634,7 @@ const Chatbox: React.FC<{
               color: "var(--text-primary)",
             }}
           >
-            {participants[0]?.userId?.fullName || "Chat"}
+            {chatPartner?.fullName || "Chat"}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div
@@ -550,18 +642,18 @@ const Chatbox: React.FC<{
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: "var(--success)",
+                background: chatPartner?.isOnline ? "var(--success)" : "var(--text-muted)",
                 flexShrink: 0,
               }}
             />
             <span
               style={{
-                color: "var(--success)",
+                color: chatPartner?.isOnline ? "var(--success)" : "var(--text-secondary)",
                 fontSize: 11.5,
                 fontWeight: 500,
               }}
             >
-              Online
+              {chatPartnerStatus}
             </span>
           </div>
         </div>
@@ -712,6 +804,82 @@ const Chatbox: React.FC<{
           flexShrink: 0,
         }}
       >
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageSelect}
+          style={{ display: "none" }}
+        />
+        <button
+          onClick={handleImageClick}
+          disabled={sendingImage}
+          title="Send image"
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 14,
+            border: "1px solid var(--border)",
+            background: "var(--bg-elevated)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: sendingImage ? "not-allowed" : "pointer",
+            flexShrink: 0,
+            transition: "all 0.15s",
+            color: sendingImage ? "var(--text-muted)" : "var(--accent)",
+          }}
+          onMouseEnter={(e) => {
+            if (!sendingImage) {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!sendingImage) {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+            }
+          }}
+        >
+          {sendingImage ? (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ animation: "spin 0.9s linear infinite" }}
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeDasharray="60"
+                strokeDashoffset="20"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <circle cx="9" cy="9" r="2" fill="currentColor" />
+              <polyline
+                points="21 15 16 10 3 21"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+        </button>
         <div
           style={{
             flex: 1,

@@ -10,12 +10,29 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import ChatModel from "./ChatModel";
 
-const getInitials = (name: string) =>
-  name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? "")
-    .join("");
+type ChatWithOptionalMedia = Chats & { profilePic?: string };
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = error as { response?: { data?: { message?: string } } };
+    return response.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+};
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return (parts[0][0] || "").toUpperCase();
+  const first = parts[0][0] || "";
+  const last = parts[parts.length - 1][0] || "";
+  return (first + last).toUpperCase();
+};
 
 const AVATAR_COLORS = [
   "#6c63ff", "#f59e0b", "#10b981", "#ef4444",
@@ -29,6 +46,7 @@ const avatarColor = (str: string) =>
 interface ChatListProps {
   chat: Chats;
   me: Me;
+  onlineUserIds: Set<string>;
   setChats: React.Dispatch<React.SetStateAction<Chats[]>>;
   handleSelectedChat: (chatId: string) => void;
   handleDeleteChat: (chatId: string) => void;
@@ -37,7 +55,7 @@ interface ChatListProps {
 }
 
 const ChatListChatBox: React.FC<ChatListProps> = React.memo(
-  ({ chat, handleSelectedChat, handleDeleteChat, deletingChatId, me, setChats, isSelected }) => {
+  ({ chat, handleSelectedChat, handleDeleteChat, deletingChatId, me, onlineUserIds, isSelected }) => {
     const chatName = React.useMemo(() => {
       if (chat.type === "group") {
         return chat.name || "Group";
@@ -60,8 +78,29 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
 
     const name = chatName ?? "Chat";
     const color = avatarColor(name);
-    const lastMsg = chat?.lastMessage?.text || "No messages yet";
+    const lastMessageObj = chat.lastMessage;
+    let lastMsg = "No messages yet";
+    if (lastMessageObj) {
+      if (lastMessageObj.text && lastMessageObj.text.trim() !== "") {
+        lastMsg = lastMessageObj.text;
+      } else if (lastMessageObj.type === "image") {
+        lastMsg = "Image";
+      } else if (lastMessageObj.type === "video") {
+        lastMsg = "Video";
+      } else if (lastMessageObj.type === "audio") {
+        lastMsg = "Audio";
+      } else {
+        lastMsg = "Message";
+      }
+    }
     const hasUnseen = (chat?.unseenCount ?? 0) > 0;
+    const otherParticipant =
+      chat.type === "private"
+        ? chat.participants.find((p) => p.userId._id.toString() !== me._id?.toString())
+        : undefined;
+    const isOnline = otherParticipant
+      ? onlineUserIds.has(otherParticipant.userId._id.toString())
+      : false;
 
     return (
       <div
@@ -100,23 +139,35 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
               color: "#fff",
               letterSpacing: "0.03em",
               flexShrink: 0,
+              overflow: "hidden",
             }}
           >
-            {getInitials(name)}
+            {(() => {
+              const avatarUrl = chat.type === "private"
+                ? chat.participants.find((p) => p.userId._id.toString() !== me._id?.toString())?.userId?.profilePic
+                : (chat as ChatWithOptionalMedia).profilePic;
+              if (avatarUrl) {
+                return (
+                  <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                );
+              }
+              return getInitials(name);
+            })()}
           </div>
-          {/* Online dot */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 1,
-              right: 1,
-              width: 11,
-              height: 11,
-              borderRadius: "50%",
-              background: "var(--success)",
-              border: "2px solid var(--bg-surface)",
-            }}
-          />
+          {isOnline && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 1,
+                right: 1,
+                width: 11,
+                height: 11,
+                borderRadius: "50%",
+                background: "var(--success)",
+                border: "2px solid var(--bg-surface)",
+              }}
+            />
+          )}
           {/* Unseen badge */}
           {hasUnseen && (
             <div
@@ -143,7 +194,6 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
           )}
         </div>
 
-        {/* Text content */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <span
@@ -158,7 +208,6 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
             >
               {name}
             </span>
-            {/* Delete - hover only */}
             <button
               onClick={handleDeleteClick}
               title="Delete chat"
@@ -212,7 +261,6 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
   },
 );
 
-/* ── Skeleton rows ────────────────────────────────────────── */
 const SkeletonRow = () => (
   <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px" }}>
     <div style={{ width: 46, height: 46, borderRadius: "50%", background: "var(--bg-elevated)", flexShrink: 0 }} />
@@ -223,7 +271,6 @@ const SkeletonRow = () => (
   </div>
 );
 
-/* ── ChatList ─────────────────────────────────────────────── */
 const ChatList: React.FC<{
   me: Me;
   setSelectedChat: React.Dispatch<React.SetStateAction<string>>;
@@ -235,22 +282,24 @@ const ChatList: React.FC<{
   const [chatsLoading, setChatsLoading] = React.useState(false);
   const [chatsError, setChatsError] = React.useState<string>("");
   const [deletingChatId, setDeletingChatId] = React.useState<string | null>(null);
+  const [botSaving, setBotSaving] = React.useState(false);
+  const [onlineUserIds, setOnlineUserIds] = React.useState<Set<string>>(new Set());
   const { chats, setChats } = useChat();
   const auth = useAuth();
   const navigate = useNavigate();
 
-  const getChats = async () => {
+  const getChats = React.useCallback(async () => {
     setChatsLoading(true);
     setChatsError("");
     try {
       const res = await axiosInstance.get<ApiResponse<Chats[]>>("/chats/get-chats", { timeout: 5000 });
       if (res.data.success) setChats(res.data.data);
-    } catch (err: any) {
-      setChatsError(err.response?.data?.message || err.message || "Failed to load chats");
+    } catch (error: unknown) {
+      setChatsError(getErrorMessage(error, "Failed to load chats"));
     } finally {
       setChatsLoading(false);
     }
-  };
+  }, [setChats]);
 
   const handleDeleteChat = React.useCallback(
     async (chatId: string) => {
@@ -262,8 +311,8 @@ const ChatList: React.FC<{
           setChats((prev) => prev.filter((c) => c._id !== chatId));
           if (selectedChat === chatId) setSelectedChat("");
         }
-      } catch (err: any) {
-        setChatsError(err.response?.data?.message || err.message || "Something went wrong");
+      } catch (error: unknown) {
+        setChatsError(getErrorMessage(error, "Something went wrong"));
       } finally {
         setDeletingChatId(null);
       }
@@ -271,7 +320,7 @@ const ChatList: React.FC<{
     [selectedChat, setChats, setSelectedChat],
   );
 
-  React.useEffect(() => { getChats(); }, []);
+  React.useEffect(() => { getChats(); }, [getChats]);
 
   React.useEffect(() => {
     const handler = ({ chatId, updatedChat }: { chatId: string; updatedChat: Chats }) => {
@@ -298,6 +347,28 @@ const ChatList: React.FC<{
   }, [selectedChat, setChats]);
 
   React.useEffect(() => {
+    const onOnlineUsers = (userIds: string[]) => {
+      setOnlineUserIds(new Set(userIds.map((id) => id.toString())));
+    };
+
+    const onPresenceUpdate = ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {
+      setOnlineUserIds((previous) => {
+        const next = new Set(previous);
+        if (isOnline) next.add(userId.toString());
+        else next.delete(userId.toString());
+        return next;
+      });
+    };
+
+    socket.on("online-users", onOnlineUsers);
+    socket.on("presence-update", onPresenceUpdate);
+    return () => {
+      socket.off("online-users", onOnlineUsers);
+      socket.off("presence-update", onPresenceUpdate);
+    };
+  }, []);
+
+  React.useEffect(() => {
     const handler = ({ chatId, updatedChat }: { chatId: string; updatedChat: Chats }) => {
       setChats((prev) => prev.map((c) => c._id === chatId ? { ...c, ...updatedChat } : c));
     };
@@ -312,16 +383,22 @@ const ChatList: React.FC<{
   };
 
   const handleLogout = async () => {
-    // Clear token from localStorage
     localStorage.removeItem('token');
-    // Navigate immediately, then sign out in background
     navigate("/signin", { replace: true });
     try {
       await axiosInstance.get("/auth/sign-out");
-    } catch (err: any) {
-      // ignore network errors here
     } finally {
       auth?.refreshAuth?.();
+    }
+  };
+
+  const handleBotToggle = async (nextValue: boolean) => {
+    setBotSaving(true);
+    try {
+      await axiosInstance.put("/user/bot", { botOn: nextValue });
+      await auth?.refreshAuth?.();
+    } finally {
+      setBotSaving(false);
     }
   };
 
@@ -335,15 +412,14 @@ const ChatList: React.FC<{
     try {
       const res = await axiosInstance.get<ApiResponse<Chats[]>>("/chats/search-chats?q=" + value, { timeout: 3000 });
       if (res.data.success) setChats(res.data.data);
-    } catch (err: any) {
-      setChatsError(err.response?.data?.message || err.message || "Search failed");
+    } catch (error: unknown) {
+      setChatsError(getErrorMessage(error, "Search failed"));
     }
   };
 
   const myInitials = getInitials(me?.fullName || "U");
   const myColor = avatarColor(me?.fullName || "U");
 
-  // On mobile this panel slides in using transform
   const sidebarStyle: React.CSSProperties = {
     width: 300,
     minWidth: 260,
@@ -359,7 +435,6 @@ const ChatList: React.FC<{
 
   return (
     <>
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen && setMobileOpen(false)}
@@ -381,7 +456,6 @@ const ChatList: React.FC<{
           transition: "left 0.25s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
-        {/* ── Header ── */}
         <div
           style={{
             display: "flex",
@@ -412,6 +486,29 @@ const ChatList: React.FC<{
             </div>
           </div>
           <button
+            onClick={() => navigate("/app/profile")}
+            title="Settings"
+            style={{
+              flexShrink: 0, width: 34, height: 34, borderRadius: 10,
+              background: "var(--bg-elevated)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "var(--text-muted)", transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "var(--accent)";
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
+              <path d="M 6 20c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </button>
+          <button
             onClick={handleLogout}
             title="Logout"
             style={{
@@ -437,9 +534,7 @@ const ChatList: React.FC<{
           </button>
         </div>
 
-        {/* ── Search + New Chat ── */}
         <div style={{ padding: "12px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
-          {/* Search */}
           <div
             style={{
               display: "flex", alignItems: "center", gap: 9,
@@ -463,7 +558,6 @@ const ChatList: React.FC<{
             />
           </div>
 
-          {/* New Chat button */}
           <button
             id="new-chat-btn"
             onClick={() => setNewChatModalOpen(true)}
@@ -496,7 +590,6 @@ const ChatList: React.FC<{
           )}
         </div>
 
-        {/* ── Nav Tabs ── */}
         <div
           style={{
             display: "flex", gap: 6, padding: "10px 12px",
@@ -506,7 +599,6 @@ const ChatList: React.FC<{
          
         </div>
 
-        {/* ── Chat list ── */}
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
           {chatsError && (
             <div
@@ -542,6 +634,7 @@ const ChatList: React.FC<{
                 key={chat._id}
                 setChats={setChats}
                 me={me}
+                onlineUserIds={onlineUserIds}
                 handleSelectedChat={handleSelectedChat}
                 handleDeleteChat={handleDeleteChat}
                 deletingChatId={deletingChatId}
@@ -550,6 +643,69 @@ const ChatList: React.FC<{
               />
             ))
           )}
+        </div>
+
+        <div
+          style={{
+            padding: "12px 14px 14px",
+            borderTop: "1px solid var(--border)",
+            background: "var(--bg-surface)",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "12px 12px",
+              borderRadius: 14,
+              border: "1px solid var(--border)",
+              background: "var(--bg-elevated)",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
+                Bot replies
+              </span>
+              <span style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>
+                Enable or disable AI responses
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleBotToggle(!me?.botOn)}
+              disabled={botSaving}
+              aria-pressed={!!me?.botOn}
+              style={{
+                width: 48,
+                height: 28,
+                borderRadius: 999,
+                border: "1px solid transparent",
+                background: me?.botOn ? "var(--accent)" : "var(--border)",
+                position: "relative",
+                cursor: botSaving ? "not-allowed" : "pointer",
+                transition: "all 0.18s ease",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  left: me?.botOn ? 24 : 3,
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  transition: "left 0.18s ease",
+                }}
+              />
+            </button>
+          </div>
         </div>
       </aside>
     </>
