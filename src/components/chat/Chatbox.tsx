@@ -20,9 +20,12 @@ const Chatbox: React.FC<{
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
-  const [unsendingMessageId, setUnsendingMessageId] = React.useState<string | null>(null);
+  const [unsendingMessageId, setUnsendingMessageId] = React.useState<
+    string | null
+  >(null);
   const [messagesLoading, setMessagesLoading] = React.useState<boolean>(false);
-  const [participantsLoading, setParticipantsLoading] = React.useState<boolean>(false);
+  const [participantsLoading, setParticipantsLoading] =
+    React.useState<boolean>(false);
   const { setChats } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -97,7 +100,9 @@ const Chatbox: React.FC<{
 
       setUnsendingMessageId(messageId);
       try {
-        const res = await axiosInstance.post(`/message/unsend?_id=${messageId}`);
+        const res = await axiosInstance.post(
+          `/message/unsend?_id=${messageId}`,
+        );
         if (res.data.success) {
           setMessages((prev) => prev.filter((m) => m._id !== messageId));
         }
@@ -207,27 +212,26 @@ const Chatbox: React.FC<{
     const calleeId = participants?.[0]?.userId?._id?.toString();
     if (!calleeId || !peer) return;
 
-    const call = peer.call(
-      calleeId,
-      mediaStream,
-      {
-        metadata: {
-          user: {
-            _id: me._id,
-            fullName: me.fullName,
-            email: me.email,
-            profilePic: me.profilePic,
-          },
+    const call = peer.call(calleeId, mediaStream, {
+      metadata: {
+        user: {
+          _id: me._id,
+          fullName: me.fullName,
+          email: me.email,
+          profilePic: me.profilePic,
         },
       },
-    );
+    });
 
     // Save call to context so overlay and other UI can access it
     chatContext?.setLocalStream?.(mediaStream);
     chatContext?.setCurrentCall?.(call);
     chatContext?.setOnCall?.(true);
     chatContext?.setIsOutgoing?.(true);
-    chatContext?.setCaller?.({ fullName: participants?.[0]?.userId?.fullName, profilePic: participants?.[0]?.userId?.profilePic });
+    chatContext?.setCaller?.({
+      fullName: participants?.[0]?.userId?.fullName,
+      profilePic: participants?.[0]?.userId?.profilePic,
+    });
 
     call.on("stream", async (stream) => {
       chatContext?.setRemoteStream?.(stream);
@@ -503,7 +507,7 @@ const Chatbox: React.FC<{
               color: "var(--text-primary)",
             }}
           >
-            Chat
+            {participants[0]?.userId?.fullName || "Chat"}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div
@@ -561,8 +565,23 @@ const Chatbox: React.FC<{
                 fontSize: 13,
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
-                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="54" strokeDashoffset="18" strokeLinecap="round" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ animation: "spin 0.9s linear infinite" }}
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray="54"
+                  strokeDashoffset="18"
+                  strokeLinecap="round"
+                />
               </svg>
               Loading messages...
             </div>
@@ -624,7 +643,9 @@ const Chatbox: React.FC<{
                 marginTop: 24,
               }}
             >
-              {participantsLoading ? "Loading conversation..." : "No messages yet. Say hello! 👋"}
+              {participantsLoading
+                ? "Loading conversation..."
+                : "No messages yet. Say hello! 👋"}
             </div>
           )}
 
