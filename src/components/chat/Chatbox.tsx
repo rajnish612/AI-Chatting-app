@@ -15,9 +15,11 @@ const Chatbox: React.FC<{
   me: Me;
   onMenuClick?: () => void;
 }> = ({ selectedChat, me, onMenuClick }) => {
+  const [skip, setSkip] = React.useState<number>(0);
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [participants, setParticipants] = React.useState<Participant[]>([]);
+  const [initialLoad, setInitialLoad] = React.useState<boolean>(true);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
   const [unsendingMessageId, setUnsendingMessageId] = React.useState<
@@ -32,9 +34,13 @@ const Chatbox: React.FC<{
   const context = React.useContext(AuthContext);
   const peer = context?.peer;
   const chatContext = React.useContext(ChatContext);
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 0);
+  };
 
   React.useEffect(() => {
     const fetchMessages = async () => {
@@ -43,9 +49,13 @@ const Chatbox: React.FC<{
       setMessagesLoading(true);
       try {
         const res = await axiosInstance.get<ApiResponse<Message[]>>(
-          `/message/get-messages?chatId=${selectedChat}`,
+          `/message/get-messages?chatId=${selectedChat}&skip=${skip}`,
         );
         if (res.data.success) setMessages(res.data.data);
+        setTimeout(() => {
+          scrollToBottom();
+          setInitialLoad(false);
+        }, 500);
       } catch (err: any) {
         setError(
           err.response?.data?.message ||
@@ -247,7 +257,32 @@ const Chatbox: React.FC<{
       chatContext?.setLocalStream?.(null);
     });
   };
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const div = e.currentTarget;
 
+
+    if (div.scrollTop <= 0 && !messagesLoading && !initialLoad) {
+      const newSkip = skip + 10;
+      const previousHeight = div.scrollHeight;
+      setMessagesLoading(true);
+      try {
+        const res = await axiosInstance.get<ApiResponse<Message[]>>(
+          `/message/get-messages?chatId=${selectedChat}&skip=${newSkip}`,
+        );
+        if (res.data.success) {
+          setSkip(newSkip);
+          setMessages((prev) => [...res.data.data, ...prev]);
+        }
+        setTimeout(() => {
+          div.scrollTop = div.scrollHeight - previousHeight;
+        }, 0);
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setMessagesLoading(false);
+      }
+    }
+  };
   if (!selectedChat) {
     return (
       <div
@@ -535,8 +570,10 @@ const Chatbox: React.FC<{
 
       {/* ── Messages ── */}
       <div
+        onScroll={handleScroll}
         style={{
           flex: 1,
+
           overflowY: "auto",
           background: "var(--bg-base)",
           display: "flex",
