@@ -251,14 +251,23 @@ const ChatList: React.FC<{
 
   React.useEffect(() => {
     const handler = ({ chatId, updatedChat }: { chatId: string; updatedChat: Chats }) => {
-      setChats((prev) => [
-        {
-          ...prev.find((c) => c._id === chatId),
-          ...updatedChat,
-          unseenCount: selectedChat === chatId ? 0 : (prev.find((c) => c._id === chatId)?.unseenCount || 0) + 1,
-        },
-        ...prev.filter((c) => c._id !== chatId),
-      ]);
+      setChats((prev) => {
+        const previousChat = prev.find((c) => c._id === chatId);
+
+        return [
+          {
+            ...previousChat,
+            ...updatedChat,
+            unseenCount:
+              selectedChat === chatId
+                ? 0
+                : typeof updatedChat.unseenCount === "number"
+                  ? updatedChat.unseenCount
+                  : previousChat?.unseenCount || 0,
+          },
+          ...prev.filter((c) => c._id !== chatId),
+        ];
+      });
     };
     socket.on("chat-update", handler);
     return () => { socket.off("chat-update", handler); };
