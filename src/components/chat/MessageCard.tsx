@@ -2,16 +2,23 @@ import React from "react";
 import type { Me } from "../types/me.type";
 import type { Participant } from "../types/participant.type";
 import type { Message } from "../types/message.type";
-import axiosInstance from "../../lib/axios";
 
 interface Props {
   participants: Participant[];
   me: Me;
   message: Message;
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  onUnsendMessage?: (messageId: string) => Promise<void> | void;
+  unsendingMessageId?: string | null;
 }
 
-const MessageCard: React.FC<Props> = ({ me, message, participants, setMessages }) => {
+const MessageCard: React.FC<Props> = ({
+  me,
+  message,
+  participants,
+  onUnsendMessage,
+  unsendingMessageId,
+}) => {
+  const [showActions, setShowActions] = React.useState(false);
   const filteredParticipants = participants.filter(
     (p) => p.userId._id != me._id,
   );
@@ -19,21 +26,13 @@ const MessageCard: React.FC<Props> = ({ me, message, participants, setMessages }
     (p) => p.lastSeen >= message.createdAt,
   );
 
-  const handleUnsendMessage = async () => {
-    try {
-      const res = await axiosInstance.post(`/message/unsend?_id=${message._id}`);
-      if (res.data.success) {
-        setMessages((prev) => prev.filter((m) => m._id !== message._id));
-      }
-    } catch (err: any) {
-      console.error("Unsend error:", err?.response);
-    }
-  };
-
   const isOwn = me._id == message.senderId;
+  const isUnsending = unsendingMessageId === message._id;
 
   return (
     <div
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -91,7 +90,9 @@ const MessageCard: React.FC<Props> = ({ me, message, participants, setMessages }
       {/* Unsend button — only for own messages, shown on hover */}
       {isOwn && (
         <button
-          onClick={handleUnsendMessage}
+          onClick={() => onUnsendMessage?.(message._id)}
+          disabled={isUnsending}
+          title="Unsend message"
           style={{
             marginTop: 4,
             padding: "3px 10px",
@@ -101,16 +102,12 @@ const MessageCard: React.FC<Props> = ({ me, message, participants, setMessages }
             color: "var(--danger)",
             fontSize: 11,
             fontWeight: 500,
-            cursor: "pointer",
-            opacity: 0,
+            cursor: isUnsending ? "not-allowed" : "pointer",
+            opacity: isUnsending ? 0.6 : showActions ? 1 : 0,
             transition: "opacity 0.18s",
           }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0")}
-          onFocus={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-          onBlur={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0")}
         >
-          Unsend
+          {isUnsending ? "Deleting..." : "Unsend"}
         </button>
       )}
     </div>

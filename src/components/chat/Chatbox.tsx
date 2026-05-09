@@ -20,6 +20,7 @@ const Chatbox: React.FC<{
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [textMessage, setTextMessage] = React.useState<string>("");
   const [sendingMessage, setSendingMessage] = React.useState<boolean>(false);
+  const [unsendingMessageId, setUnsendingMessageId] = React.useState<string | null>(null);
   const { setChats } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -81,6 +82,32 @@ const Chatbox: React.FC<{
       setSendingMessage(false);
     }
   };
+
+  const handleUnsendMessage = React.useCallback(
+    async (messageId: string) => {
+      if (!messageId || unsendingMessageId) return;
+
+      const confirmed = window.confirm("Delete this message for everyone?");
+      if (!confirmed) return;
+
+      setUnsendingMessageId(messageId);
+      try {
+        const res = await axiosInstance.post(`/message/unsend?_id=${messageId}`);
+        if (res.data.success) {
+          setMessages((prev) => prev.filter((m) => m._id !== messageId));
+        }
+      } catch (err: any) {
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to delete message",
+        );
+      } finally {
+        setUnsendingMessageId(null);
+      }
+    },
+    [unsendingMessageId],
+  );
 
   const updateLastSeen = React.useCallback(async () => {
     try {
@@ -572,11 +599,12 @@ const Chatbox: React.FC<{
 
           {messages.map((message, idx) => (
             <MessageCard
-              setMessages={setMessages}
               participants={participants}
-              key={idx}
+              key={message._id || idx}
               message={message}
               me={me}
+              onUnsendMessage={handleUnsendMessage}
+              unsendingMessageId={unsendingMessageId}
             />
           ))}
           <div ref={messagesEndRef} />
