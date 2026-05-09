@@ -10,7 +10,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import ChatModel from "./ChatModel";
 
-/* ── Avatar helpers ───────────────────────────────────────── */
 const getInitials = (name: string) =>
   name
     .split(" ")
@@ -27,7 +26,6 @@ const avatarColor = (str: string) =>
     str.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % AVATAR_COLORS.length
   ];
 
-/* ── ChatListChatBox ──────────────────────────────────────── */
 interface ChatListProps {
   chat: Chats;
   me: Me;
@@ -505,26 +503,7 @@ const ChatList: React.FC<{
             borderBottom: "1px solid var(--border)", flexShrink: 0,
           }}
         >
-          {["Chats", "Calls", "Groups"].map((tab, i) => (
-            <button
-              key={tab}
-              style={{
-                padding: "6px 14px", borderRadius: 9, border: "none",
-                background: i === 0 ? "var(--accent-dim)" : "transparent",
-                color: i === 0 ? "var(--accent-light)" : "var(--text-secondary)",
-                fontWeight: 500, fontSize: 13, cursor: "pointer",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                if (i !== 0) (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-              }}
-              onMouseLeave={(e) => {
-                if (i !== 0) (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+         
         </div>
 
         {/* ── Chat list ── */}

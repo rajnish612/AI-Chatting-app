@@ -15,7 +15,7 @@ const Chatbox: React.FC<{
   me: Me;
   onMenuClick?: () => void;
 }> = ({ selectedChat, me, onMenuClick }) => {
-  const [skip, setSkip] = React.useState<number>(0);
+  const skipRef = React.useRef(0);
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [participants, setParticipants] = React.useState<Participant[]>([]);
@@ -45,11 +45,12 @@ const Chatbox: React.FC<{
   React.useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedChat) return;
+      skipRef.current = 0;
       setError("");
       setMessagesLoading(true);
       try {
         const res = await axiosInstance.get<ApiResponse<Message[]>>(
-          `/message/get-messages?chatId=${selectedChat}&skip=${skip}`,
+          `/message/get-messages?chatId=${selectedChat}&skip=${skipRef.current}`,
         );
         if (res.data.success) setMessages(res.data.data);
         setTimeout(() => {
@@ -252,7 +253,7 @@ const Chatbox: React.FC<{
       chatContext?.setOnCall?.(false);
       chatContext?.setIsOutgoing?.(false);
       chatContext?.setRemoteStream?.(null);
-      // stop local media
+   
       if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
       chatContext?.setLocalStream?.(null);
     });
@@ -260,9 +261,8 @@ const Chatbox: React.FC<{
   const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const div = e.currentTarget;
 
-
     if (div.scrollTop <= 0 && !messagesLoading && !initialLoad) {
-      const newSkip = skip + 10;
+      const newSkip = skipRef.current + 10;
       const previousHeight = div.scrollHeight;
       setMessagesLoading(true);
       try {
@@ -270,7 +270,7 @@ const Chatbox: React.FC<{
           `/message/get-messages?chatId=${selectedChat}&skip=${newSkip}`,
         );
         if (res.data.success) {
-          setSkip(newSkip);
+          skipRef.current = newSkip;
           setMessages((prev) => [...res.data.data, ...prev]);
         }
         setTimeout(() => {
