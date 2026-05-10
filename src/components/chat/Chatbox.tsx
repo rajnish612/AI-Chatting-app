@@ -27,7 +27,8 @@ const Chatbox: React.FC<{
   selectedChat: string;
   me: Me;
   onMenuClick?: () => void;
-}> = ({ selectedChat, me, onMenuClick }) => {
+  onDetailsClick?: () => void;
+}> = ({ selectedChat, me, onMenuClick, onDetailsClick }) => {
   const skipRef = React.useRef(0);
   const [err, setError] = React.useState<string>("");
   const [messages, setMessages] = React.useState<Message[]>([]);
@@ -685,6 +686,26 @@ const Chatbox: React.FC<{
             {botStatusLabel}
           </div>
         </div>
+        <button
+          className="flex lg:hidden"
+          onClick={onDetailsClick}
+          style={{
+            height: 34,
+            padding: "0 10px",
+            borderRadius: 9,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border)",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-secondary)",
+            fontSize: 12,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          Media
+        </button>
         <button onClick={createCall}>Call</button>
       </div>
 

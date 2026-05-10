@@ -9,9 +9,14 @@ import CallOverlay from "../call/CallOverlay";
 const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = React.useState<string>("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
+  const [mobileDetailsOpen, setMobileDetailsOpen] = React.useState(false);
  
   const authContext = useAuth();
   const { loading, me, error } = authContext;
+
+  React.useEffect(() => {
+    setMobileDetailsOpen(false);
+  }, [selectedChat]);
   
   if (loading)
     return (
@@ -170,13 +175,83 @@ const Chat: React.FC = () => {
             me={me}
             selectedChat={selectedChat}
             onMenuClick={() => setMobileSidebarOpen(true)}
+            onDetailsClick={() => setMobileDetailsOpen(true)}
           />
         </div>
+
+        {/* Mobile details panel */}
+        {selectedChat && mobileDetailsOpen && (
+          <div
+            className="lg:hidden"
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 60,
+              background: "rgba(0,0,0,0.45)",
+            }}
+            onClick={() => setMobileDetailsOpen(false)}
+          >
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 0,
+                height: "100%",
+                width: "min(88vw, 320px)",
+                background: "var(--bg-surface)",
+                borderLeft: "1px solid var(--border)",
+                display: "flex",
+                flexDirection: "column",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "12px 14px",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Chat Details
+                </span>
+                <button
+                  onClick={() => setMobileDetailsOpen(false)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-elevated)",
+                    color: "var(--text-secondary)",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    lineHeight: 1,
+                  }}
+                  aria-label="Close chat details"
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <ChatDetails selectedChat={selectedChat} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Right details panel — hidden on small screens */}
         {selectedChat && (
           <div className="hidden lg:flex" style={{ flexShrink: 0 }}>
-            <ChatDetails selectedChat={selectedChat} me={me} />
+            <ChatDetails selectedChat={selectedChat} />
           </div>
         )}
       </div>
