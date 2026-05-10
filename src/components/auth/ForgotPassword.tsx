@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axiosInstance from "../../lib/axios";
 import type { ApiResponse } from "../../lib/apiResponse";
+import { getApiErrorMessage } from "../../lib/error";
 import { useNavigate } from "react-router-dom";
 
 type ForgotPasswordStep = "email" | "verify" | "reset";
@@ -40,9 +41,8 @@ const ForgotPassword: React.FC = () => {
           setSuccess("");
         }, 1500);
       }
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Failed to send OTP";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to send OTP");
       setErrors({ submit: message });
     } finally {
       setIsSubmitting(false);
@@ -103,9 +103,8 @@ const ForgotPassword: React.FC = () => {
           navigate("/signin");
         }, 2000);
       }
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Failed to reset password";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to reset password");
       setErrors({ submit: message });
     } finally {
       setIsSubmitting(false);

@@ -74,7 +74,7 @@ const UserCard: React.FC<UserProps> = ({
   return (
     <div
       className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer"
-      style={{ border: "1px solid transparent" }}
+      style={{ border: "1px solid transparent", padding: "8px 12px" }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)";
         (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
@@ -106,6 +106,7 @@ const UserCard: React.FC<UserProps> = ({
           color: "var(--accent-light)",
           border: "1px solid rgba(108,99,255,0.25)",
           cursor: loading ? "not-allowed" : "pointer",
+          padding: "6px 10px",
         }}
       >
         {loading ? (
@@ -180,7 +181,7 @@ const ChatModel: React.FC<ChatModelProps> = ({
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: "var(--border)" }}
+          style={{ borderColor: "var(--border)", padding: "16px" }}
         >
           <div>
             <h2
@@ -212,7 +213,7 @@ const ChatModel: React.FC<ChatModelProps> = ({
         </div>
 
         {/* Users list */}
-        <div className="px-3 py-3 flex flex-col gap-1 overflow-y-auto" style={{ flex: 1, minHeight: 120 }}>
+        <div className="px-3 py-3 flex flex-col gap-3 overflow-y-auto" style={{ flex: 1, minHeight: 120, padding: "12px" }}>
           {error && (
             <div
               style={{
@@ -232,13 +233,13 @@ const ChatModel: React.FC<ChatModelProps> = ({
 
           {loading ? (
             [1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--bg-elevated)" }} />
-                <div style={{ height: 13, width: "55%", borderRadius: 6, background: "var(--bg-elevated)" }} />
-              </div>
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5" style={{ padding: "8px 12px" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--bg-elevated)" }} />
+                  <div style={{ height: 13, width: "55%", borderRadius: 6, background: "var(--bg-elevated)" }} />
+                </div>
             ))
           ) : users.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10">
+            <div className="flex flex-col items-center gap-2 py-10" style={{ padding: "12px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.5" />
                 <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5" />

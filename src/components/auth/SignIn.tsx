@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import axiosInstance from "../../lib/axios";
+import { getApiErrorMessage } from "../../lib/error";
 import { useNavigate } from "react-router-dom";
 
 interface credentials {
@@ -42,7 +43,7 @@ const SignIn = () => {
         context?.refreshAuth?.();
       }
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : "Sign in failed");
+      setSubmitError(getApiErrorMessage(err, "Sign in failed"));
     } finally {
       setSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import axiosInstance from "../../lib/axios";
 import type { ApiResponse } from "../../lib/apiResponse";
+import { getApiErrorMessage } from "../../lib/error";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -25,6 +26,10 @@ const Profile: React.FC = () => {
   const [emailVerification, setEmailVerification] = useState({
     step: "idle", // idle, sending, verifying
     newEmail: "",
+    otp: "",
+  });
+  const [deleteAccountFlow, setDeleteAccountFlow] = useState({
+    step: "idle" as "idle" | "otp-sent",
     otp: "",
   });
 
@@ -106,9 +111,8 @@ const Profile: React.FC = () => {
           });
           setFormData((prev) => ({ ...prev, email: me?.email || "" }));
         }
-      } catch (error: any) {
-        const message =
-          error.response?.data?.message || "Failed to send OTP";
+      } catch (error: unknown) {
+        const message = getApiErrorMessage(error, "Failed to send OTP");
         setErrors({ submit: message });
       } finally {
         setIsSubmitting(false);
@@ -132,9 +136,8 @@ const Profile: React.FC = () => {
           window.location.reload();
         }, 1500);
       }
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Failed to update profile";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to update profile");
       setErrors({ submit: message });
     } finally {
       setIsSubmitting(false);
@@ -169,9 +172,8 @@ const Profile: React.FC = () => {
           window.location.reload();
         }, 1500);
       }
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Failed to verify email";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to verify email");
       setErrors({ submit: message });
     } finally {
       setIsSubmitting(false);
@@ -215,9 +217,61 @@ const Profile: React.FC = () => {
           navigate("/app/chat");
         }, 1500);
       }
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Failed to change password";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to change password");
+      setErrors({ submit: message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSendDeleteOtp = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This action is permanent.",
+    );
+    if (!confirmed) return;
+
+    setIsSubmitting(true);
+    setErrors({});
+    setSuccess("");
+    try {
+      const response = await axiosInstance.post<ApiResponse<any>>(
+        "/auth/send-delete-account-otp",
+      );
+      if (response.data.success) {
+        setDeleteAccountFlow({ step: "otp-sent", otp: "" });
+        setSuccess("Deletion OTP sent to your email.");
+      }
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to send deletion OTP");
+      setErrors({ submit: message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setErrors({});
+    setSuccess("");
+
+    if (!deleteAccountFlow.otp || deleteAccountFlow.otp.length !== 4) {
+      setErrors({ deleteOtp: "Enter the 4-digit OTP" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await axiosInstance.post<ApiResponse<any>>(
+        "/auth/verify-delete-account",
+        { otp: deleteAccountFlow.otp },
+      );
+
+      if (response.data.success) {
+        localStorage.removeItem("token");
+        window.location.replace("/signin");
+      }
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to delete account");
       setErrors({ submit: message });
     } finally {
       setIsSubmitting(false);
@@ -665,6 +719,130 @@ const Profile: React.FC = () => {
               >
                 {isSubmitting ? "Saving..." : "Save Changes"}
               </button>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(239,68,68,0.45)",
+                  background: "rgba(239,68,68,0.08)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      color: "var(--danger)",
+                      fontWeight: 700,
+                      fontSize: 14,
+                    }}
+                  >
+                    Danger Zone
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--text-secondary)",
+                      fontSize: 12,
+                      marginTop: 4,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Deleting your account will remove your chats, messages, and all related data permanently.
+                  </div>
+                </div>
+
+                {deleteAccountFlow.step === "idle" ? (
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleSendDeleteOtp}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 8,
+                      background: "var(--danger)",
+                      color: "#fff",
+                      border: "none",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: isSubmitting ? "not-allowed" : "pointer",
+                      opacity: isSubmitting ? 0.7 : 1,
+                    }}
+                  >
+                    {isSubmitting ? "Sending OTP..." : "Delete Account"}
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <input
+                      type="text"
+                      placeholder="Enter deletion OTP"
+                      value={deleteAccountFlow.otp}
+                      maxLength={4}
+                      onChange={(e) => {
+                        const otp = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        setDeleteAccountFlow((prev) => ({ ...prev, otp }));
+                        if (errors.deleteOtp) {
+                          setErrors((prev) => ({ ...prev, deleteOtp: "" }));
+                        }
+                      }}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 8,
+                        border: errors.deleteOtp ? "1px solid var(--danger)" : "1px solid var(--border)",
+                        background: "var(--bg-base)",
+                        color: "var(--text-primary)",
+                        fontSize: 14,
+                        outline: "none",
+                        letterSpacing: "4px",
+                        textAlign: "center",
+                      }}
+                    />
+                    {errors.deleteOtp && (
+                      <span style={{ fontSize: 12, color: "var(--danger)" }}>{errors.deleteOtp}</span>
+                    )}
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        disabled={isSubmitting}
+                        style={{
+                          flex: 1,
+                          padding: "10px 14px",
+                          borderRadius: 8,
+                          background: "var(--danger)",
+                          color: "#fff",
+                          border: "none",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: isSubmitting ? "not-allowed" : "pointer",
+                          opacity: isSubmitting ? 0.7 : 1,
+                        }}
+                      >
+                        {isSubmitting ? "Deleting..." : "Confirm Delete"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteAccountFlow({ step: "idle", otp: "" })}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 8,
+                          background: "transparent",
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border)",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </form>
           )}
 

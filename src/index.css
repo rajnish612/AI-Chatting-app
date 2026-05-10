@@ -106,3 +106,26 @@ input:focus { outline: none; }
 
 /* ── Selection ─────────────────────────────────────────────── */
 ::selection { background: var(--accent-dim); color: var(--text-primary); }
+
+/* Fix browser autofill / white background in inputs */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-elevated) inset !important;
+  box-shadow: 0 0 0px 1000px var(--bg-elevated) inset !important;
+  background-clip: padding-box !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-elevated) inset !important;
+}
+
+/* Ensure transparent inputs keep dark background */
+input, textarea {
+  background-color: transparent;
+  color: var(--text-primary);
+}

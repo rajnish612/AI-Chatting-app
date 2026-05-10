@@ -76,6 +76,14 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
       handleDeleteChat(chat._id);
     };
 
+    const [isMobile, setIsMobile] = React.useState<boolean>(false);
+    React.useEffect(() => {
+      const check = () => setIsMobile(window.innerWidth <= 768);
+      check();
+      window.addEventListener("resize", check);
+      return () => window.removeEventListener("resize", check);
+    }, []);
+
     const name = chatName ?? "Chat";
     const color = avatarColor(name);
     const lastMessageObj = chat.lastMessage;
@@ -213,7 +221,7 @@ const ChatListChatBox: React.FC<ChatListProps> = React.memo(
               title="Delete chat"
               className="group-hover:opacity-100"
               style={{
-                opacity: deletingChatId === chat._id ? 0.7 : 0,
+                opacity: deletingChatId === chat._id ? 0.7 : (isMobile ? 1 : 0),
                 flexShrink: 0,
                 background: "transparent",
                 border: "none",
@@ -327,17 +335,16 @@ const ChatList: React.FC<{
       setChats((prev) => {
         const previousChat = prev.find((c) => c._id === chatId);
 
+        // If we don't have the chat locally yet, just insert the updatedChat
+        const baseChat = previousChat ? { ...previousChat, ...updatedChat } : updatedChat;
+
+        const unseenCount = selectedChat === chatId
+          ? 0
+          : (typeof updatedChat.unseenCount === "number" ? updatedChat.unseenCount : previousChat?.unseenCount || 0);
+
+        // Ensure we don't attempt to spread undefined and return a valid array
         return [
-          {
-            ...previousChat,
-            ...updatedChat,
-            unseenCount:
-              selectedChat === chatId
-                ? 0
-                : typeof updatedChat.unseenCount === "number"
-                  ? updatedChat.unseenCount
-                  : previousChat?.unseenCount || 0,
-          },
+          { ...baseChat, unseenCount },
           ...prev.filter((c) => c._id !== chatId),
         ];
       });

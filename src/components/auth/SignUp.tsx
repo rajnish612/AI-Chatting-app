@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../lib/axios";
 import { useAuth } from "../../hooks/useAuth";
+import { getApiErrorMessage } from "../../lib/error";
 interface credentials {
   fullname?: string;
   email?: string;
@@ -44,7 +45,7 @@ const SignUp = () => {
         setStep("otp");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Sign up failed";
+      const message = getApiErrorMessage(err, "Sign up failed");
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -67,8 +68,7 @@ const SignUp = () => {
         context?.refreshAuth?.();
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "OTP verification failed";
+      const message = getApiErrorMessage(err, "OTP verification failed");
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -126,6 +126,7 @@ const SignUp = () => {
           background: "var(--bg-surface)",
           border: "1px solid var(--border-active)",
           boxShadow: "var(--shadow-lg)",
+          padding: 32, // explicit fallback in case Tailwind utilities aren't applied
         }}
       >
         {/* Logo / Brand */}
@@ -211,6 +212,7 @@ const SignUp = () => {
                   style={{
                     background: "var(--bg-elevated)",
                     border: "1px solid var(--border)",
+                    padding: "12px 16px",
                   }}
                   onFocus={(e) =>
                     (e.currentTarget.style.borderColor = "var(--accent)")
@@ -252,13 +254,10 @@ const SignUp = () => {
                       outline: "none",
                       color: "var(--text-primary)",
                       fontSize: 14,
+                      padding: "8px 0",
                     }}
                   />
                 </div>
-              </div>
-
-              {/* Email */}
-              <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="email"
                   style={{
@@ -275,6 +274,7 @@ const SignUp = () => {
                   style={{
                     background: "var(--bg-elevated)",
                     border: "1px solid var(--border)",
+                    padding: "12px 16px",
                   }}
                   onFocus={(e) =>
                     (e.currentTarget.style.borderColor = "var(--accent)")
@@ -314,13 +314,10 @@ const SignUp = () => {
                       outline: "none",
                       color: "var(--text-primary)",
                       fontSize: 14,
+                      padding: "8px 0",
                     }}
                   />
                 </div>
-              </div>
-
-              {/* Password */}
-              <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="password"
                   style={{
@@ -337,6 +334,7 @@ const SignUp = () => {
                   style={{
                     background: "var(--bg-elevated)",
                     border: "1px solid var(--border)",
+                    padding: "12px 16px",
                   }}
                   onFocus={(e) =>
                     (e.currentTarget.style.borderColor = "var(--accent)")
@@ -381,6 +379,7 @@ const SignUp = () => {
                       outline: "none",
                       color: "var(--text-primary)",
                       fontSize: 14,
+                      padding: "8px 0",
                     }}
                   />
                 </div>
@@ -422,6 +421,7 @@ const SignUp = () => {
                   style={{
                     background: "var(--bg-elevated)",
                     border: "1px solid var(--border)",
+                    padding: "12px 16px",
                   }}
                   onFocus={(e) =>
                     (e.currentTarget.style.borderColor = "var(--accent)")
@@ -447,6 +447,7 @@ const SignUp = () => {
                       fontWeight: 600,
                       textAlign: "center",
                       letterSpacing: "0.5em",
+                      padding: "8px 0",
                     }}
                   />
                 </div>
@@ -498,6 +499,7 @@ const SignUp = () => {
                 submitting || (step === "otp" && otp.length !== 4)
                   ? "not-allowed"
                   : "pointer",
+              padding: "12px 16px",
             }}
             onMouseEnter={(e) => {
               if (!submitting && (step === "signup" || otp.length === 4)) {
