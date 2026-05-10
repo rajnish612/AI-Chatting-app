@@ -102,7 +102,7 @@ const SignIn = () => {
           boxShadow: "var(--shadow-lg)",
         }}
       >
-        {/* Logo / Brand */}
+        {/* Brand + Product Intro */}
         <div className="flex flex-col items-center gap-3 mb-2">
           <div
             style={{
@@ -131,7 +131,7 @@ const SignIn = () => {
                 color: "var(--text-primary)",
               }}
             >
-              Welcome back
+              Nexus Chat
             </h1>
             <p
               style={{
@@ -140,8 +140,38 @@ const SignIn = () => {
                 marginTop: 4,
               }}
             >
-              Sign in to continue to Nexus Chat
+              AI-powered chatting app for real-time conversations
             </p>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 8,
+              marginTop: 6,
+            }}
+          >
+            {[
+              "Smart AI replies",
+              "Realtime messaging",
+              "Voice calling",
+            ].map((feature) => (
+              <span
+                key={feature}
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: "var(--accent-light)",
+                  background: "rgba(108,99,255,0.12)",
+                  border: "1px solid rgba(108,99,255,0.28)",
+                  borderRadius: 999,
+                  padding: "5px 10px",
+                }}
+              >
+                {feature}
+              </span>
+            ))}
           </div>
         </div>
 

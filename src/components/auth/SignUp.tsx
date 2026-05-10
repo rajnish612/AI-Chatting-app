@@ -129,7 +129,7 @@ const SignUp = () => {
           padding: 32, // explicit fallback in case Tailwind utilities aren't applied
         }}
       >
-        {/* Logo / Brand */}
+        {/* Brand + Product Intro */}
         <div className="flex flex-col items-center gap-3 mb-2">
           <div
             style={{
@@ -156,7 +156,7 @@ const SignUp = () => {
               className="font-bold tracking-tight"
               style={{ fontSize: 24, color: "var(--text-primary)" }}
             >
-              {step === "signup" ? "Create your account" : "Verify your email"}
+              {step === "signup" ? "Nexus Chat" : "Verify your email"}
             </h1>
             <p
               style={{
@@ -166,10 +166,42 @@ const SignUp = () => {
               }}
             >
               {step === "signup"
-                ? "Get started with Nexus Chat for free"
+                ? "AI-powered chatting app with smart conversations and calls"
                 : "Enter the 4-digit code we sent to your email"}
             </p>
           </div>
+          {step === "signup" && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 8,
+                marginTop: 6,
+              }}
+            >
+              {[
+                "AI chat assistant",
+                "Realtime updates",
+                "Secure auth + OTP",
+              ].map((feature) => (
+                <span
+                  key={feature}
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: "var(--accent-light)",
+                    background: "rgba(108,99,255,0.12)",
+                    border: "1px solid rgba(108,99,255,0.28)",
+                    borderRadius: 999,
+                    padding: "5px 10px",
+                  }}
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <form
