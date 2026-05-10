@@ -296,6 +296,7 @@ const Chatbox: React.FC<{
   };
   const chatPartner = participants[0]?.userId;
   const chatPartnerStatus = chatPartner?.isOnline ? "Online" : "Offline";
+  const botStatusLabel = chatPartner?.botOn ? "Bot enabled" : "Bot disabled";
   const createCall = async () => {
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -655,6 +656,33 @@ const Chatbox: React.FC<{
             >
               {chatPartnerStatus}
             </span>
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              alignSelf: "flex-start",
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: chatPartner?.botOn ? "rgba(108,99,255,0.12)" : "rgba(148,163,184,0.12)",
+              border: `1px solid ${chatPartner?.botOn ? "rgba(108,99,255,0.25)" : "rgba(148,163,184,0.25)"}`,
+              color: chatPartner?.botOn ? "var(--accent-light)" : "var(--text-secondary)",
+              fontSize: 11.5,
+              fontWeight: 600,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: chatPartner?.botOn ? "var(--accent-light)" : "var(--text-muted)",
+                flexShrink: 0,
+              }}
+            />
+            {botStatusLabel}
           </div>
         </div>
         <button onClick={createCall}>Call</button>

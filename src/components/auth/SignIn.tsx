@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import axiosInstance from "../../lib/axios";
 import { useNavigate } from "react-router-dom";
+
 interface credentials {
   email?: string;
   password?: string;
 }
+
 const SignIn = () => {
   const navigate = useNavigate();
   const context = useAuth();
@@ -18,12 +20,14 @@ const SignIn = () => {
   });
   const [submitError, setSubmitError] = React.useState<string>("");
   const [submitting, setSubmitting] = React.useState<boolean>(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.name as keyof credentials;
     const value: string = e.target.value;
     if (submitError) setSubmitError("");
     setCredentials((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
@@ -31,7 +35,6 @@ const SignIn = () => {
     try {
       const res = await axiosInstance.post("/auth/sign-in", credentials);
       if (res.data.success == true) {
-        // Store token in localStorage
         if (res.data.token) {
           localStorage.setItem("token", res.data.token);
         }
@@ -50,9 +53,10 @@ const SignIn = () => {
       navigate("/app/chat", { replace: true });
     }
   }, [me, loading, navigate]);
+
   return (
     <div
-      className="min-h-screen w-full flex justify-center items-center relative overflow-hidden  px-4 py-8 sm:py-10"
+      className="min-h-screen w-full flex justify-center items-center relative overflow-hidden px-4 py-8 sm:py-10"
       style={{
         background: "var(--bg-base)",
         padding: "clamp(16px, 4vw, 28px)",
@@ -60,14 +64,13 @@ const SignIn = () => {
     >
       {/* Background glow orbs */}
       <div
-        className="absolute  pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           width: 520,
           height: 520,
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(108,99,255,0.18) 0%, transparent 70%)",
-
           top: "-120px",
           left: "-120px",
           filter: "blur(40px)",
@@ -88,11 +91,10 @@ const SignIn = () => {
       />
 
       <div
-        className="anim-scaleIn relative w-full flex flex-col gap-6 p-5  sm:p-8 rounded-2xl"
+        className="anim-scaleIn relative w-full flex flex-col gap-6 rounded-2xl"
         style={{
           width: "min(100%, 440px)",
-          padding: "clamp(18px, 3.8vw, 34px)",
-
+          padding: "clamp(24px, 4vw, 38px)",
           maxWidth: 440,
           background: "var(--bg-surface)",
           border: "1px solid var(--border-active)",
@@ -100,7 +102,7 @@ const SignIn = () => {
         }}
       >
         {/* Logo / Brand */}
-        <div className="flex flex-col   items-center gap-3 mb-2">
+        <div className="flex flex-col items-center gap-3 mb-2">
           <div
             style={{
               width: 52,
@@ -123,7 +125,10 @@ const SignIn = () => {
           <div className="text-center">
             <h1
               className="font-bold tracking-tight"
-              style={{ fontSize: 24, color: "var(--text-primary)" }}
+              style={{
+                fontSize: 22,
+                color: "var(--text-primary)",
+              }}
             >
               Welcome back
             </h1>
@@ -139,7 +144,7 @@ const SignIn = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSignIn} className="flex w-full flex-col gap-4">
+        <form onSubmit={handleSignIn} className="flex flex-col gap-4">
           {submitError && (
             <div
               style={{
@@ -170,10 +175,11 @@ const SignIn = () => {
               Email address
             </label>
             <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl transition-all duration-200"
               style={{
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border)",
+                padding: "12px 14px",
               }}
               onFocus={(e) =>
                 (e.currentTarget.style.borderColor = "var(--accent)")
@@ -194,11 +200,6 @@ const SignIn = () => {
                   stroke="currentColor"
                   strokeWidth="2"
                 />
-                <polyline
-                  points="22,6 12,13 2,6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
               </svg>
               <input
                 onChange={handleChange}
@@ -209,9 +210,11 @@ const SignIn = () => {
                 style={{
                   width: "100%",
                   background: "transparent",
+
                   border: "none",
                   outline: "none",
                   color: "var(--text-primary)",
+
                   fontSize: 14,
                 }}
               />
@@ -232,10 +235,11 @@ const SignIn = () => {
               Password
             </label>
             <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl transition-all duration-200"
               style={{
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border)",
+                padding: "12px 14px",
               }}
               onFocus={(e) =>
                 (e.currentTarget.style.borderColor = "var(--accent)")
@@ -275,7 +279,6 @@ const SignIn = () => {
                 placeholder="••••••••"
                 style={{
                   width: "100%",
-                  background: "transparent",
                   border: "none",
                   outline: "none",
                   color: "var(--text-primary)",
@@ -290,13 +293,14 @@ const SignIn = () => {
             id="signin-submit"
             type="submit"
             disabled={submitting}
-            className="w-full py-3 rounded-xl font-semibold text-white transition-all duration-200 mt-1"
+            className="w-full rounded-xl font-semibold text-white transition-all duration-200 mt-1"
             style={{
               background: submitting ? "var(--text-muted)" : "var(--accent)",
               boxShadow: submitting ? "none" : "var(--shadow-accent)",
               fontSize: 15,
               letterSpacing: "0.01em",
               cursor: submitting ? "not-allowed" : "pointer",
+              padding: "12px 16px",
             }}
             onMouseEnter={(e) => {
               if (!submitting) {

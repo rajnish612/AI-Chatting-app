@@ -468,13 +468,29 @@ const ChatList: React.FC<{
         >
           <div
             style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: myColor, flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 700, fontSize: 14, color: "#fff",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: myColor,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: 14,
+              color: "#fff",
+              overflow: "hidden",
             }}
           >
-            {myInitials}
+            {me?.profilePic ? (
+              <img
+                src={me.profilePic}
+                alt={me?.fullName || "User"}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            ) : (
+              myInitials
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

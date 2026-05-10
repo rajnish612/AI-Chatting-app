@@ -4,6 +4,7 @@ export type Participant = {
     fullName: string;
     profilePic: string;
     isOnline?: boolean;
+    botOn?: boolean;
   };
   lastSeen: Date;
 };
