@@ -2,6 +2,7 @@ import React from "react";
 import type { MediaConnection } from "peerjs";
 import { AuthContext } from "../../context/AuthContext";
 import { ChatContext } from "../../context/Chat.context";
+import socket from "../../lib/socket";
 
 type CallerInfo = {
   fullName?: string;
@@ -21,6 +22,7 @@ const CallOverlay: React.FC = () => {
   const setIsOutgoing = chatContext?.setIsOutgoing;
   const isOutgoing = chatContext?.isOutgoing ?? false;
   const localStreamContext = chatContext?.localStream ?? null;
+  const setLocalStream = chatContext?.setLocalStream;
 
   const localStreamRef = React.useRef<MediaStream | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -28,18 +30,76 @@ const CallOverlay: React.FC = () => {
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [caller, setCaller] = React.useState<CallerInfo>({});
 
-  const closeOverlay = React.useCallback(() => {
+  const getCallLocalStream = React.useCallback((): MediaStream | null => {
+    const maybeCall = currentCall as unknown as { localStream?: MediaStream } | null;
+    return maybeCall?.localStream ?? null;
+  }, [currentCall]);
+
+  const applyMuteState = React.useCallback(
+    (nextMuted: boolean) => {
+      const shouldEnable = !nextMuted;
+      const streams = [localStreamContext, localStreamRef.current, getCallLocalStream()].filter(
+        Boolean,
+      ) as MediaStream[];
+
+      const visitedTracks = new Set<string>();
+      streams.forEach((stream) => {
+        stream.getAudioTracks().forEach((track) => {
+          if (visitedTracks.has(track.id)) return;
+          visitedTracks.add(track.id);
+          track.enabled = shouldEnable;
+        });
+      });
+    },
+    [getCallLocalStream, localStreamContext],
+  );
+
+  const closeOverlay = React.useCallback((notifyRemote = false, reason = "ended") => {
+    const remotePeerId = currentCall?.peer;
+    if (notifyRemote && remotePeerId) {
+      socket.emit("call-end", { to: remotePeerId, reason });
+    }
+
     currentCall?.close?.();
     setCurrentCall?.(null);
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamContext?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    setLocalStream?.(null);
     setMuted(false);
     setIsConnecting(false);
     setCaller({});
     setRemoteStream?.(null);
     setIsOutgoing?.(false);
     setOnCall?.(false);
-  }, [currentCall, setOnCall, setCurrentCall, setIsOutgoing, setRemoteStream]);
+  }, [
+    currentCall,
+    localStreamContext,
+    setLocalStream,
+    setOnCall,
+    setCurrentCall,
+    setIsOutgoing,
+    setRemoteStream,
+  ]);
+
+  const handleCallClosed = React.useCallback(() => {
+    closeOverlay(false);
+  }, [closeOverlay]);
+
+  const handleCallError = React.useCallback(() => {
+    closeOverlay(false);
+  }, [closeOverlay]);
+
+  React.useEffect(() => {
+    const handleCallEnd = () => {
+      closeOverlay(false);
+    };
+
+    socket.on("call-end", handleCallEnd);
+    return () => {
+      socket.off("call-end", handleCallEnd);
+    };
+  }, [closeOverlay]);
 
   React.useEffect(() => {
     if (!peer) return;
@@ -53,8 +113,8 @@ const CallOverlay: React.FC = () => {
       setIsConnecting(false);
 
       // ensure we clean up if caller cancels before the receiver answers
-      call.on("close", closeOverlay);
-      call.on("error", closeOverlay);
+      call.on("close", handleCallClosed);
+      call.on("error", handleCallError);
     };
 
     peer.on("call", handleCall);
@@ -62,13 +122,25 @@ const CallOverlay: React.FC = () => {
     return () => {
       peer.off("call", handleCall);
     };
-  }, [peer, setOnCall, setCurrentCall, closeOverlay, setIsOutgoing]);
+  }, [
+    peer,
+    setOnCall,
+    setCurrentCall,
+    closeOverlay,
+    setIsOutgoing,
+    handleCallClosed,
+    handleCallError,
+  ]);
 
   React.useEffect(() => {
     if (!onCall) {
       setIsConnecting(false);
     }
   }, [onCall]);
+
+  React.useEffect(() => {
+    applyMuteState(muted);
+  }, [applyMuteState, muted, localStreamContext, currentCall]);
 
   const handleAccept = async () => {
     const call = currentCall;
@@ -79,6 +151,7 @@ const CallOverlay: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
+      setLocalStream?.(stream);
 
       stream.getAudioTracks().forEach((track) => {
         track.enabled = !muted;
@@ -88,8 +161,8 @@ const CallOverlay: React.FC = () => {
       call.on("stream", (s: MediaStream) => {
         setRemoteStream?.(s);
       });
-      call.on("close", closeOverlay);
-      call.on("error", closeOverlay);
+      call.on("close", handleCallClosed);
+      call.on("error", handleCallError);
     } catch {
       closeOverlay();
     } finally {
@@ -98,22 +171,13 @@ const CallOverlay: React.FC = () => {
   };
 
   const handleDecline = () => {
-    closeOverlay();
+    closeOverlay(true, isOutgoing ? "cancelled" : "declined");
   };
 
   const handleToggleMute = () => {
     const nextMuted = !muted;
     setMuted(nextMuted);
-
-    // support both caller (context) and receiver (local ref)
-    if (localStreamContext) {
-      localStreamContext.getAudioTracks().forEach((track) => (track.enabled = !nextMuted));
-      // also update context reference if needed
-      chatContext?.setLocalStream?.(localStreamContext);
-    }
-    localStreamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = !nextMuted;
-    });
+    applyMuteState(nextMuted);
   };
 
   if (!onCall) return null;
@@ -129,7 +193,7 @@ const CallOverlay: React.FC = () => {
   // determine whether call is answered/connected
   const answered = isOutgoing ? !!remoteStream : !!localStreamRef.current;
 
-  const handleEndCall = () => closeOverlay();
+  const handleEndCall = () => closeOverlay(true, "ended");
 
   return (
     <div
